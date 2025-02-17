@@ -1,0 +1,224 @@
+---
+title: "Data Cleaning: Eurovision"
+author: "Max Glonek"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output: 
+  html_document:
+    number_sections: yes
+    df_print: paged
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 6, 
+  fig.asp = 0.618, 
+  out.width = "70%",
+  fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(tidyverse, tidymodels)
+theme_set(theme_bw())
+if (Sys.info()[["sysname"]]=="Windows") { # if windows
+  wdpath <- glue::glue("C:/Users/maxgl/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+} else if (Sys.info()[["sysname"]]=="Darwin") { # if mac
+  wdpath <- glue::glue("~/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+}
+```
+
+# Rule 1: Look at the Data
+
+# Rule 2: Is There a Package to Deal With That
+
+```{r}
+songs <- jsonlite::fromJSON(glue::glue("./data/eurovision-lyrics.json"))
+```
+
+# Rule 3: Break it Into Pieces
+
+```{r}
+songs[[1]]
+```
+
+```{r}
+parse_song <- function(song){
+  country <- song$Country
+  artist <- song$Artist
+  title <- song$Song
+  year <- song$Year
+  lyrics <- song$Lyrics
+  translation <- song$`Lyrics translation`
+  place <- song$Pl.
+  tibble(
+    country, artist, title, year, lyrics, translation, place
+  )
+}
+parse_song(songs[[1]])
+```
+
+# Rule 4: Get it Into a Tibble
+
+```{r}
+songs <- 
+  songs %>% 
+  map_df(parse_song, .id = "ID")
+songs
+```
+
+# Rule 5: Look at Each Column
+
+We need to make sure all of our data makes sense in context. You can find the source data at this link: <https://www.kaggle.com/minitree/eurovision-song-lyrics>
+
+## ID
+
+This is an ID number assigned to each song. We should check that the song IDs are all unique.
+
+```{r}
+songs %>% count(ID) %>% filter(n > 1)
+```
+
+They are unique, but they're also not useful, so delete them.
+
+```{r}
+songs <- 
+  songs %>% 
+  select(-ID)
+songs
+```
+
+## Artist
+
+Are there any artists who appear more than once?
+
+```{r}
+songs %>% 
+  count(artist) %>%
+  arrange(-n)
+```
+
+```{r}
+songs %>%
+  filter(str_detect(artist, "Jed"))
+```
+
+```{r}
+songs %>%
+  filter(country == "Australia")
+```
+
+## Title
+
+```{r}
+songs %>%
+  count(title) %>% 
+  arrange(-n)
+```
+
+## Year
+
+```{r}
+range(songs$year)
+```
+
+```{r}
+songs %>% 
+  count(year) %>% 
+  ggplot(aes(year, n)) + 
+  geom_point() + 
+  theme(axis.text.x = element_text(angle = -90, hjust=0))
+```
+
+## Lyrics
+
+```{r}
+songs %>% 
+  sample_n(5) %>% 
+  pull(lyrics) %>% 
+  cat(sep = "\n\n\n")
+```
+
+## Translation
+
+```{r}
+songs %>% 
+  sample_n(5) %>% 
+  pull(translation) %>% 
+  cat(sep = "\n\n\n")
+```
+
+## Place
+
+```{r}
+songs %>% count(place)
+```
+
+```{r}
+length(unique(songs$year))
+```
+
+```{r}
+songs %>% 
+  count(year, place) %>% 
+  filter(place == "1") %>% 
+  arrange(-n)
+```
+
+According to Wikpedia, there were four winners in 1969:
+
+<https://en.wikipedia.org/wiki/Eurovision_Song_Contest>
+
+> On only one occasion have multiple winners been declared in a single contest: in 1969, four countries finished the contest with an equal number of votes and due to the lack of a tie-break rule at the time, all four countries were declared winners.[7][157] 
+
+# Rule 6: You May Need to Go Back
+
+Our original parse function just grabbed `translation` as is. After looking at `translation`, we can see that this variable says `English` if the original song lyrics are in English. English.
+
+# Rule 7: Create New Columns?
+
+## Decade
+
+```{r}
+songs
+songs <- 
+  songs %>% 
+  mutate(
+    year = parse_number(year), 
+    decade = year - year %% 10
+  )
+songs %>% 
+  ggplot(aes(year, decade)) + 
+  geom_point()
+```
+
+## Lyrics
+
+```{r}
+songs %>% 
+  count(translation) %>%
+  arrange(-n)
+```
+
+```{r}
+songs <- 
+  songs %>% 
+  mutate(
+    english_lyrics = ifelse(
+      translation == "English",
+      lyrics, translation
+    ) 
+  )
+```
+
+# Rule 7: Save the Data and Write it Up
+
+It's critically important to make detailed notes about any changes you have made when cleaning the data.
+
+```{r}
+filenamepath <- glue::glue("./data/{lubridate::today()}-eurovision.rds")
+filenamepath
+write_rds(songs,filenamepath)
+```
