@@ -1,0 +1,307 @@
+---
+title: 'Linear Regression: Fuel Economy'
+author: "Max Glonek"
+date: Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`,
+  `r format(Sys.time(),'%Y')`
+output:
+  pdf_document:
+    toc: true
+    latex_engine: xelatex
+  html_document:
+    number_sections: true
+    df_print: paged
+    toc: true
+    toc_float: true
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 6, 
+  fig.asp = 0.618, 
+  out.width = "70%",
+  fig.align = "center", 
+  root.dir = '../'
+)
+```
+
+# Case study
+
+## Set up libraries
+
+```{r}
+pacman::p_load(
+  tidyverse, 
+  tidymodels,
+  AppliedPredictiveModeling, 
+  skimr, 
+  janitor, 
+  corrplot, 
+  vip
+)
+```
+
+## Read in data
+
+```{r}
+data(FuelEconomy, package = "AppliedPredictiveModeling")
+```
+
+
+## Pre-processing
+
+### Convert to tibble
+
+```{r}
+cars2010 <- as_tibble(cars2010)
+```
+
+### Clean names and select predictors
+
+```{r}
+cars2010 <- clean_names(cars2010)
+cars2010 <- 
+  cars2010 %>% 
+  select(
+    eng_displ, 
+    num_cyl, 
+    FE = fe, 
+    num_gears, 
+    drive_desc
+  )
+cars2010
+```
+
+### Recode the drive predictor
+
+```{r}
+cars2010 %>% 
+  count(drive_desc)
+cars2010<- 
+  cars2010 %>% 
+  mutate(
+    drive = case_when(
+      str_detect(drive_desc, "Front") ~ "front", 
+      str_detect(drive_desc, "Rear") ~ "rear", 
+      TRUE ~ "4WD"
+    ))
+cars2010 %>% 
+  count(drive_desc, drive)
+cars2010 <- 
+  cars2010 %>% 
+  select(-drive_desc)
+cars2010
+```
+
+### Convert character into factor
+
+```{r}
+cars2010 <- 
+  cars2010 %>% 
+  mutate_if(
+    is.character, factor
+  )
+cars2010
+```
+
+
+### Split into training and testing
+
+```{r}
+set.seed(2020)
+car_split <- initial_split(cars2010, strata = FE)
+car_train <- training(car_split)
+car_test <- testing(car_split)
+```
+
+
+## EDA
+
+### Overview
+
+```{r}
+skim(car_train)
+```
+
+
+### Look at Fuel efficiency
+
+```{r}
+car_train %>% 
+  ggplot(aes(FE)) + 
+  geom_histogram(col = "black", fill = "orange")
+```
+
+### Bivariate relationships
+
+```{r}
+car_train %>% 
+  ggplot(aes(eng_displ, FE)) + 
+  geom_point()
+```
+
+```{r}
+car_train %>% 
+  ggplot(aes(factor(num_cyl), FE)) + 
+  geom_boxplot()
+```
+
+```{r}
+car_train %>% 
+  ggplot(aes(factor(num_gears), FE)) + 
+  geom_boxplot()
+```
+
+```{r}
+car_train %>% 
+  ggplot(aes(drive, FE)) + geom_boxplot()
+```
+
+### Relationship between predictors
+
+```{r}
+car_train %>% 
+  select_if(is.numeric) %>% 
+  cor() %>% 
+  corrplot()
+```
+
+
+### Preprocessing with recipes
+
+```{r}
+car_recipe <- 
+  recipe(FE ~ ., data = car_train) %>% 
+  step_poly(eng_displ, degree = 2, options = list(raw = TRUE))
+car_recipe
+```
+
+
+```{r}
+car_recipe <- car_recipe %>% prep()
+car_recipe
+```
+
+
+```{r}
+car_train <- car_recipe %>% juice()
+car_train
+```
+
+
+```{r}
+car_test <- car_recipe %>% bake(car_test)
+car_test
+```
+
+## Fit model
+
+```{r}
+car_lm <- 
+  linear_reg() %>% 
+  set_engine("lm") %>% 
+  fit(FE ~ ., data = car_train)
+car_lm
+```
+
+
+## Use model
+
+### Model fit
+
+```{r}
+car_train %>% 
+  add_column(
+    predict(car_lm, new_data = car_train)
+  ) %>% 
+  yardstick::rmse(truth = FE, estimate = .pred)
+```
+
+```{r}
+car_test %>% 
+  add_column(
+    predict(car_lm, new_data = car_test)
+  ) %>% 
+  yardstick::rmse(truth = FE, estimate = .pred)
+
+```
+
+### Check assumptions
+
+```{r}
+car_res <- augment(car_lm$fit)
+car_res
+```
+
+```{r}
+car_res %>% 
+  ggplot(aes(.fitted, .resid)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+```
+
+```{r}
+car_res %>% 
+  ggplot(aes(sample = .resid)) + 
+  stat_qq() + 
+  stat_qq_line()
+```
+
+```{r}
+car_res %>% 
+  ggplot(aes(.hat, .std.resid)) +
+  geom_vline(size = 2, colour = "white", xintercept = 0) +
+  geom_hline(size = 2, colour = "white", yintercept = 0) +
+  geom_point(aes(size = .cooksd)) + geom_smooth(se = FALSE)
+```
+
+### Variable importance
+
+```{r}
+vi(car_lm)
+```
+
+```{r}
+vip(car_lm, 
+    include_type = TRUE, 
+    geom = 'point',
+    mapping = aes_string(col = "Sign"), size = 5) + 
+  scale_color_brewer(palette = "Set1")
+```
+
+### Inference
+
+```{r}
+tidy(car_lm$fit)
+```
+
+```{r}
+tidy(car_lm$fit) %>% 
+  arrange(p.value)
+```
+
+### Prediction
+
+
+```{r}
+new_data <- tibble(
+  num_cyl = 4, 
+  num_gears = 6, 
+  eng_displ = 5, 
+  drive = "front"
+) 
+new_data
+```
+
+```{r}
+new_data <- bake(car_recipe, new_data = new_data)
+new_data
+```
+
+```{r}
+predict(car_lm, new_data = new_data)
+predict(car_lm, new_data = new_data, type = "pred_int")
+```
+
