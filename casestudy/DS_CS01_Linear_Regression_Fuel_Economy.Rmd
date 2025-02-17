@@ -4,14 +4,14 @@ author: "Max Glonek"
 date: Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`,
   `r format(Sys.time(),'%Y')`
 output:
-  pdf_document:
-    toc: true
-    latex_engine: xelatex
   html_document:
     number_sections: true
     df_print: paged
     toc: true
     toc_float: true
+  pdf_document:
+    toc: true
+    latex_engine: xelatex
 editor_options:
   chunk_output_type: console
 ---
