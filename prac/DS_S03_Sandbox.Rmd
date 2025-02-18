@@ -1,0 +1,45 @@
+---
+title: "Seminar 3: Sandbox"
+author: "Max Glonek"
+institute: "School of Computer and Mathematical Sciences, University of Adelaide"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: no
+    includes:
+      in_header: header.tex
+  bookdown::html_document2: default
+    
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.618, 
+ out.width = "70%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(tidyverse,tidymodels,bookdown)
+```
+
+# Try it Yourself: Add a Figure
+```{r label, fig.cap= "CAPTION", echo = FALSE}
+plot(1:10, 1:10, type = "l") 
+```
+See the figure \@ref(fig:label)
+# Try it Yourself: Add a Table
+```{r LABEL, echo=FALSE}
+tibble::as.tibble(1:10) %>%
+  knitr::kable(caption = "CAPTION")
+```
+As the tibble \ref{tab:LABEL} shows
+
+# Try it Yourself: Formatting Mathematics
+
+# Try it Yourself: Formatting Environments
+
+# Try it Yourself: Displaying Code You Don't Want to Run
