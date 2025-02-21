@@ -1,0 +1,4 @@
+pacman::p_load(tidyverse, ggplot2)
+data(mpg, package ="ggplot2")
+
+
