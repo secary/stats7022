@@ -1,5 +1,5 @@
 # Library packages and load data
-pacman::p_load(tidyverse, ggplot2, dplyr)
+pacman::p_load(tidyverse, dplyr)
 data(mpg, package ="ggplot2")
 
 # Calculate the mean efficiency
@@ -8,7 +8,7 @@ mean_eff <- mpg %>%
   summarise(cty = mean(cty),
             hwy = mean(hwy))  
 
-# Sort by city fuel efficiency and convert the tibble to long fourm
+# Sort by city fuel efficiency and convert the tibble to long form
 mean_eff <- mean_eff %>% 
   arrange(cty) %>% 
   mutate(class = factor(class, levels = class)) %>% 
@@ -16,7 +16,7 @@ mean_eff <- mean_eff %>%
 
 # Plot
 ggplot(mean_eff, aes(x = class, y = mean, fill = measure)) +
-  geom_col(position = "dodge", color = "black", size = 0.5) +
+  geom_col(position = "dodge", color = "black", linewidth = 0.5) +
   # Add title and axis title
   labs(
     title = "Column plot of mean fuel efficiency",
