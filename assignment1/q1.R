@@ -27,7 +27,7 @@ ggplot(mean_eff, aes(x = class, y = mean, fill = measure)) +
   scale_fill_manual(values = c("cty" = "navy", "hwy" = "salmon")) +
   theme_bw() +
   theme(
-    panel.border = element_rect(color = "black", fill = NA, size = 1),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
     legend.position = "bottom"
   ) 
 
