@@ -6,8 +6,6 @@ date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integ
 output:
   bookdown::pdf_document2:
     toc: no
-    # includes:
-    #   in_header: header_sol.tex
   bookdown::html_document2: default
 editor_options:
   chunk_output_type: console
@@ -23,8 +21,43 @@ knitr::opts_chunk$set(
   root.dir = '../'
 )
 pacman::p_load(tidyverse,tidymodels,bookdown)
+source("q1.R")
 ```
 
-# Column plot of mean fuel efficiency
+# R code for creating column plot of mean fuel efficiency
+To create a bar chart for average fuel efficiencies of city and highway grouped by car classes, we should group the data and calculate their each mean fuel efficiencies, as Table \@ref(tab:meaneffTab) shows.
+```{r code=readLines("q1.R"), eval=FALSE}
+```
+```{r meaneffTab, echo=FALSE}
+mean_eff %>% 
+  knitr::kable(caption = "Mean Fuel Efficiencies grouped by Car Classes.")
+```
 
+An important aspect to highlight is that the bars in the plot should be ordered from lowest to highest based on the city's mean fuel efficiency. Therefore, we need to use R code to ensure the bars are plotted in the correct order.    
 
+# Generate the plot
+- **The figure should have titles**  
+- **The colours filled in the bars**: #0d0887 for city and #e16462 for highway  
+- **The bars of highways** should be placed next to those of cities  
+- **The legend** should be placed at the bottom of the figure  
+
+```{r Plot, fig.cap="Column plot of mean fuel efficiency", echo=FALSE}
+# Plot
+ggplot(mean_eff, aes(x = class, y = mean, fill = measure)) +
+  geom_col(position = "dodge", color = "black", linewidth = 0.5) +
+  # Add title and axis title
+  labs(
+    title = "Column plot of mean fuel efficiency",
+    x = "Vehicle class",
+    y = "Mean fuel efficiency (miles per gallon)"
+  ) +
+  # Set filling colours and themes
+  scale_fill_manual(values = c("cty" = "#0d0887", "hwy" = "#e16462")) +
+  theme_bw() +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+    legend.position = "bottom"
+  ) 
+```
+
+So we would generate the Figure \@ref(fig:Plot) as the question asked. 
