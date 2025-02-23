@@ -24,10 +24,6 @@ ggplot(mean_eff, aes(x = class, y = mean, fill = measure)) +
     y = "Mean fuel efficiency (miles per gallon)"
   ) +
   # Set filling colours and themes
-  scale_fill_manual(values = c("cty" = "navy", "hwy" = "salmon")) +
+  scale_fill_manual(values = c("cty" = "#0d0887", "hwy" = "#e16462")) +
   theme_bw() +
-  theme(
-    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
-    legend.position = "bottom"
-  ) 
-
+  theme(legend.position = "bottom") 

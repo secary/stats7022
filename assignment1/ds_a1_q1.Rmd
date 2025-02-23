@@ -30,7 +30,7 @@ To create a bar chart for average fuel efficiencies of city and highway grouped 
 ```
 ```{r meaneffTab, echo=FALSE}
 mean_eff %>% 
-  knitr::kable(caption = "Mean Fuel Efficiencies grouped by Car Classes.")
+  knitr::kable(caption = "Mean Fuel Efficiencies grouped by Vehicle Classes.")
 ```
 
 An important aspect to highlight is that the bars in the plot should be ordered from lowest to highest based on the city's mean fuel efficiency. Therefore, we need to use R code to ensure the bars are plotted in the correct order.    
@@ -54,10 +54,7 @@ ggplot(mean_eff, aes(x = class, y = mean, fill = measure)) +
   # Set filling colours and themes
   scale_fill_manual(values = c("cty" = "#0d0887", "hwy" = "#e16462")) +
   theme_bw() +
-  theme(
-    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
-    legend.position = "bottom"
-  ) 
+  theme(legend.position = "bottom") 
 ```
 
 So we would generate the Figure \@ref(fig:Plot) as the question asked. 
