@@ -6,8 +6,6 @@ date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integ
 output:
   bookdown::pdf_document2:
     toc: no
-    includes:
-      in_header: header.tex
   bookdown::html_document2: default
 editor_options:
   chunk_output_type: console
