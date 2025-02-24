@@ -1,0 +1,26 @@
+---
+title: "DS_A1_Q4"
+author: "Dongju Ma"
+institute: "School of Computer and Mathematical Sciences, University of Adelaide"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: no
+    # includes:
+    #   in_header: header_sol.tex
+  bookdown::html_document2: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.618, 
+ out.width = "70%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(bookdown)
+```
