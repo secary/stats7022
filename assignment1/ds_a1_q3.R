@@ -11,7 +11,7 @@ get_ROC <- function(obs, A) {
   # YOUR CODE HERE
   obs <- factor(obs, levels = c("B", "A"))
   
-  thresholds <- c(Inf, sort(unique(A), decreasing = TRUE), -Inf)
+  thresholds <- c(-Inf, sort(unique(A)), Inf)
   
   results <- lapply(thresholds, function(thresh){
     pred <- ifelse(A >= thresh, "A", "B")
@@ -24,7 +24,7 @@ get_ROC <- function(obs, A) {
     sen <- TP/(TP + FN)
     spe <- TN/(TN + FP)
     
-    tibble(threshold = thresh, sensitivity = sen, specificity = spe)
+    tibble(threshold = thresh, specificity = spe, sensitivity = sen)
   })
   
   return(bind_rows(results))
