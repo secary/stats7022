@@ -37,7 +37,6 @@ $$
 \E[(Y_0 - \hat{f}(x_0))^2] 
 &= \E[(f(x_0) + \epsilon - \hat{f}(x_0))^2] \\
 &= \E[((f(x_0) - \hat{f}(x_0)) + \epsilon )^2] \\
-&= \E[(f(x_0) - \hat{f}(x_0)^2] + 2\E[(f(x_0) - \hat{f}(x_0) \cdot \E[\epsilon] + \E[\epsilon^2] \\
 &= \E[(f(x_0) - \hat{f}(x_0)^2] + 2\E[(f(x_0) - \hat{f}(x_0)] \E[\epsilon] + \E[\epsilon^2]
 \end{aligned}
 $$
@@ -70,19 +69,18 @@ $$
 
 Once more,  $\epsilon$ is a random error term that is independent of $x$ and has mean zero, so
 $$
-\begin{aligned}
 \E[\hat{f}(x_0)] 
-&= \E[f(x_0) + \epsilon] \\ 
-&= \E[f(x_0)] + \E[\epsilon] \\
-&= f(x_0)
-\end{aligned}
+= \E[f(x_0) + \epsilon] 
+= \E[f(x_0)] + \E[\epsilon]
+= f(x_0)
 $$
 So we can infer that $2\E[(\E[\hat{f}(x_0)] - \hat{f}(x_0))(f(x_0) - E[\hat{f}(x_0)])] = 0$.  
 According to the property of variance and the definition of bias,
 $$
-\var(\hat{f}(x_0)) = \E[(\E[\hat{f}(x_0)] - \hat{f}(x_0))^2], 
-\\
-b_f(\hat{f}(x_0))^2 = (f(x_0) - E[\hat{f}(x_0)])^2 = E[(f(x_0) - E[\hat{f}(x_0)])^2]
+\begin{aligned}
+\var(\hat{f}(x_0)) &= \E[(\E[\hat{f}(x_0)] - \hat{f}(x_0))^2], \\
+b_f(\hat{f}(x_0))^2 &= (f(x_0) - E[\hat{f}(x_0)])^2 = E[(f(x_0) - E[\hat{f}(x_0)])^2]
+\end{aligned}
 $$
 
 So the equation could be written by
