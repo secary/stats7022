@@ -1,0 +1,95 @@
+---
+title: "DS_A1_Q5"
+author: "Dongju Ma"
+institute: "School of Computer and Mathematical Sciences, University of Adelaide"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  bookdown::pdf_document2:
+    toc: no
+    includes:
+      in_header: header.tex
+  bookdown::html_document2: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.618, 
+ out.width = "70%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(bookdown)
+```
+
+# Q5
+To show that test MSE of model $Y = f(x) + \epsilon$,
+$$
+\E[(Y_0 - \hat{f}(x_0))^2] = \var(\hat{f}(x_0)) + b_f (\hat{f}(x_0))^2 + \var(\epsilon)
+$$
+
+We could write the expression of test MSE first,
+$$
+\begin{aligned}
+\E[(Y_0 - \hat{f}(x_0))^2] 
+&= \E[(f(x_0) + \epsilon - \hat{f}(x_0))^2] \\
+&= \E[((f(x_0) - \hat{f}(x_0)) + \epsilon )^2] \\
+&= \E[(f(x_0) - \hat{f}(x_0)^2] + 2\E[(f(x_0) - \hat{f}(x_0) \cdot \E[\epsilon] + \E[\epsilon^2] \\
+&= \E[(f(x_0) - \hat{f}(x_0)^2] + 2\E[(f(x_0) - \hat{f}(x_0)] \E[\epsilon] + \E[\epsilon^2]
+\end{aligned}
+$$
+
+Since $\epsilon$ is a random error term that is independent of $x$ and has mean zero, so
+$$
+E[\epsilon] = 0, \quad \var(\epsilon) = \E[\epsilon^2]
+$$
+
+Substitute the formulas into the derived test MSE expression,
+$$
+\begin{aligned}
+\E[(Y_0 - \hat{f}(x_0))^2] 
+&= \E[(f(x_0) - \hat{f}(x_0)^2] + 2\E[(f(x_0) - \hat{f}(x_0)] \cdot 0 + \var(\epsilon) \\
+&= \E[(f(x_0) - \hat{f}(x_0)^2] + \var(\epsilon)
+\end{aligned}
+$$
+To further prove the result, we transform $f(x_0) - \hat{f}(x_0)$ as follows.
+$$
+f(x_0) - \hat{f}(x_0) = (f(x_0) - \E[\hat{f}(x_0)]) + (\E[\hat{f}(x_0)] - \hat{f}(x_0))
+$$
+
+Substitute to $\E[(f(x_0) - \hat{f}(x_0)^2]$, we can obtain that,
+$$
+\E[(f(x_0) - \hat{f}(x_0))^2] = 
+\E[(\E[\hat{f}(x_0)] - \hat{f}(x_0))^2] + 
+\E[(f(x_0) - E[\hat{f}(x_0)])^2] +
+2\E[(\E[\hat{f}(x_0)] - \hat{f}(x_0))(f(x_0) - E[\hat{f}(x_0)])]
+$$
+
+Once more,  $\epsilon$ is a random error term that is independent of $x$ and has mean zero, so
+$$
+\begin{aligned}
+\E[\hat{f}(x_0)] 
+&= \E[f(x_0) + \epsilon] \\ 
+&= \E[f(x_0)] + \E[\epsilon] \\
+&= f(x_0)
+\end{aligned}
+$$
+So we can infer that $2\E[(\E[\hat{f}(x_0)] - \hat{f}(x_0))(f(x_0) - E[\hat{f}(x_0)])] = 0$.  
+According to the property of variance and the definition of bias,
+$$
+\var(\hat{f}(x_0)) = \E[(\E[\hat{f}(x_0)] - \hat{f}(x_0))^2], 
+\\
+b_f(\hat{f}(x_0))^2 = (f(x_0) - E[\hat{f}(x_0)])^2 = E[(f(x_0) - E[\hat{f}(x_0)])^2]
+$$
+
+So the equation could be written by
+$$
+\begin{aligned}
+\E[(Y_0 - \hat{f}(x_0))^2] 
+&= \E[(f(x_0) - \hat{f}(x_0)^2] + \var(\epsilon) \\
+&= \var(\hat{f}(x_0)) + b_f(\hat{f}(x_0))^2 + \var(\epsilon)
+\end{aligned}
+$$
