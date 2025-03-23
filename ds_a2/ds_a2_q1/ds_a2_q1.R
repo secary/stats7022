@@ -91,11 +91,13 @@ roc_2 <-  bird_bath_pred2 %>%
 roc_bind <- bind_rows(roc_1, roc_2)
 
 ggplot(roc_bind, aes(x = 1 - specificity, y = sensitivity, color = model)) +
-  geom_line() + 
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed") + 
-  scale_color_manual(values = c("Model 1" = "#F66359", "Model 2" = "#1AC5CA")) + 
+  geom_line(linewidth = 1) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dotted") +
+    scale_color_manual(values = c("Model 1" = "#F66359", "Model 2" = "#1AC5CA")) +
   labs(color = "model") +
-  theme_minimal() +
+  coord_equal() +
+  theme_bw() +
   theme(
-    panel.border = element_rect(color = "black", fill = NA, size = 1) 
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+    legend.position = "right"
   )
