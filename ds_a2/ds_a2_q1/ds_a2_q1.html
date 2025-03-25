@@ -866,7 +866,7 @@ bird_bath</code></pre>
 as the predictors</li>
 </ol>
 <pre class="r"><code>bird_bath_recipe1 &lt;- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %&gt;%
-  step_dummy()
+  step_dummy(all_nominal_predictors())
 
 bird_bath_model1 &lt;- logistic_reg() %&gt;% 
   set_mode(&quot;classification&quot;) %&gt;% 
@@ -894,8 +894,8 @@ bird_bath_wf1</code></pre>
 <code>urban_rural</code> and bird_type</li>
 </ol>
 <pre class="r"><code>bird_bath_recipe2 &lt;- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %&gt;%
-  step_dummy() %&gt;% 
-  step_interact(bird_present ~ urban_rural:bird_type)
+  step_dummy(all_nominal_predictors()) %&gt;% 
+  step_interact(~ starts_with(&quot;urban_rural_&quot;):starts_with(&quot;bird_type_&quot;))
 
 bird_bath_model2 &lt;- logistic_reg() %&gt;% 
   set_mode(&quot;classification&quot;) %&gt;% 
@@ -927,12 +927,9 @@ bird_bath_wf2</code></pre>
   fit(bird_bath)
 
 bird_bath_fit2 &lt;- bird_bath_wf2 %&gt;% 
-  fit(bird_bath)</code></pre>
-<pre><code>## Warning: Categorical variables used in `step_interact()` should probably be avoided;
-## This can lead to differences in dummy variable values that are produced by
-## ?step_dummy (`?recipes::step_dummy()`). Please convert all involved variables
-## to dummy variables first.</code></pre>
-<pre class="r"><code>bird_bath_pred1 &lt;- bird_bath %&gt;%
+  fit(bird_bath)
+
+bird_bath_pred1 &lt;- bird_bath %&gt;%
   bind_cols(predict(bird_bath_fit1, bird_bath),
             predict(bird_bath_fit1, bird_bath, type = &quot;prob&quot;)) %&gt;% 
   select(bird_present, starts_with(&quot;.pred&quot;))

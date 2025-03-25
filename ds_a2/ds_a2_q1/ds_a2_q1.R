@@ -34,15 +34,15 @@ bird_bath <- bird_bath %>%
   mutate_all(factor)
 bird_bath
 
+
 # 4 Models
 # Model 1
 bird_bath_recipe1 <- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %>%
-  step_dummy()
+  step_dummy(all_nominal_predictors())
 
 bird_bath_model1 <- logistic_reg() %>% 
   set_mode("classification") %>% 
   set_engine("glm")
-
 bird_bath_wf1 <- workflow() %>% 
   add_recipe(bird_bath_recipe1) %>% 
   add_model(bird_bath_model1)
@@ -50,8 +50,8 @@ bird_bath_wf1
 
 # Model2
 bird_bath_recipe2 <- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %>%
-  step_dummy() %>% 
-  step_interact(bird_present ~ urban_rural:bird_type)
+  step_dummy(all_nominal_predictors()) %>% 
+  step_interact(~ starts_with("urban_rural_"):starts_with("bird_type_"))
 
 bird_bath_model2 <- logistic_reg() %>% 
   set_mode("classification") %>% 

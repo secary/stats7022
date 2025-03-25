@@ -6,8 +6,6 @@ institute: "School of Computer and Mathematical Sciences, University of Adelaide
 date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
 output:
   bookdown::html_document2: default
-  bookdown::pdf_document2:
-    toc: no
 editor_options:
   chunk_output_type: console
 ---
@@ -128,7 +126,7 @@ We create two separate workflows using `tidymodels` :
 
 ```{r WF1}
 bird_bath_recipe1 <- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %>%
-  step_dummy()
+  step_dummy(all_nominal_predictors())
 
 bird_bath_model1 <- logistic_reg() %>% 
   set_mode("classification") %>% 
@@ -145,8 +143,8 @@ bird_bath_wf1
  
 ```{r WF2}
 bird_bath_recipe2 <- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %>%
-  step_dummy() %>% 
-  step_interact(bird_present ~ urban_rural:bird_type)
+  step_dummy(all_nominal_predictors()) %>% 
+  step_interact(~ starts_with("urban_rural_"):starts_with("bird_type_"))
 
 bird_bath_model2 <- logistic_reg() %>% 
   set_mode("classification") %>% 
