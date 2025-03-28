@@ -51,9 +51,9 @@ get_lda2 <- function(x1, x2, y, new1, new2) {
   means <- t(sapply(levels(y), function(level) colMeans(X[y == level, , drop = FALSE])))
   cov_matrix <- cov(X)
   
-  # Check whether the covariance matrix is not invertible
+  # Check whether the covariance matrix is invertible
   if (det(cov_matrix) == 0) {
-    stop("The Covariance Matrix is invertible!")
+    stop("The Covariance Matrix is not invertible!")
   }
   
   # Calculate the discriminant scores for new data

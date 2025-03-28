@@ -48,9 +48,11 @@ Thus, the sum of all observations is
     \sum_{i=1}^{n} X_i = k (\theta - \phi) + (n-k) \theta = n \theta - k \phi,
 \]
 which determines that
-\[
-    \bar{X_j} = \theta - \frac{k \phi} {n}
-\]
+\begin{align*}
+    \bar{X_j} &= \theta - \frac{k \phi} {n} \\
+    E[\bar{X_j}] &= E[\theta - \frac{k \phi} {n}] = \theta - \frac{k \phi} {n}
+\end{align*}
+
 
 \section*{2.c}
 % Find the value of k makes the estimator \theta unbiased
