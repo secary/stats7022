@@ -14,7 +14,8 @@ df <- df %>%
   mutate(X3 = as.numeric(X3)) %>% 
   mutate(C1 = ifelse(C1 %in% c("a", "b", "c", "d"), C1, NA)) %>% 
   mutate(C2 = ifelse(C2 %in% c("W", "X", "Y", "Z"), C2, NA))
-  
+
+
 skimr::skim(df)
 
 mean(df$Y)
