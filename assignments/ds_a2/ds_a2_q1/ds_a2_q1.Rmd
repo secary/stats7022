@@ -1,0 +1,203 @@
+---
+title: "STATS 7022 - Data Science <br> 
+Assignment 2: Question 1"
+author: "Dongju Ma"
+institute: "School of Computer and Mathematical Sciences, University of Adelaide"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  bookdown::html_document2: default
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.707, 
+ out.width = "100%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+
+pacman::p_load(bookdown, kableExtra)
+
+options(knitr.table.format = "html")  
+ 
+```
+
+# Load Libraries
+
+```{r LoadLibraries}
+pacman::p_load(dplyr, tidymodels)
+```
+
+# Load Data
+
+The data is contained within the file `bird_bath.rds` . The data is read in to R .  
+
+```{r LoadData}
+bird_bath <- readRDS("./data/bird_bath.rds")
+bird_bath
+```
+
+There are 161,057 rows in the `bird_bath` data.
+
+# Data Cleanning
+
+## Remove Missing Years
+
+Some rows are missing a survey year ( `survey_year` ). These rows are removed from the data.  
+
+```{r RemoveNA}
+bird_bath <- bird_bath %>% na.omit(survey_year)
+bird_bath
+```
+
+There are now 160,888 rows in the `bird_bath` data.
+
+## Identify the Top 15 Types of Bird
+
+We consider only the top 15 bird species ( `bird_type` ) by frequency ( `bird_count` ). Results are summarised in Table \@ref(tab:Top15).
+
+```{r Top15}
+top_15_birds <- filter(bird_bath, bird_count == 1)%>%
+  count(bird_type, sort = TRUE) %>%
+  slice_head(n = 15)
+
+top_15_birds %>% 
+  knitr::kable(caption = "Top 15 birds at Australian bird baths, by frequency.") %>% 
+  kable_styling(full_width = TRUE)
+```
+
+```{r Top15Filter}
+bird_bath <- bird_bath %>%
+  filter(bird_type %in% top_15_birds$bird_type)
+bird_bath
+```
+
+There are now 14,280 rows in the `bird_bath` data.
+ 
+## Create the Response Variable
+
+We define a new response variable, called `bird_present` , using the following rule:
+
+- If `bird_count` is greater than zero for a row, then `bird_present` takes value “yes”,  
+- Otherwise, `bird_present` takes value “no”.
+
+```{r ResponseVariable}
+bird_bath <- bird_bath %>% 
+  mutate(bird_present = ifelse(bird_count > 0, "yes", "no"))
+bird_bath
+```
+
+## Select Columns
+
+We only need the following columns:
+
+ - `urban_rural`  
+ - `bird_type`  
+ - `bird_present`
+
+```{r Selection} 
+bird_bath <- bird_bath %>% 
+  select(urban_rural, bird_type, bird_present)
+bird_bath
+```
+
+All other columns are removed.
+
+##  Convert Variables to Categorical
+
+We convert all remaining variables to categorical variables.
+
+```{r Factors}
+bird_bath <- bird_bath %>% 
+  mutate_all(factor)
+bird_bath
+```
+
+# Models
+
+We create two separate workflows using `tidymodels` :  
+
+ 1. A logistic regression model with `bird_present` as the response variable and urban_rural and bird_type
+ as the predictors
+
+```{r WF1}
+bird_bath_recipe1 <- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %>%
+  step_dummy(all_nominal_predictors())
+
+bird_bath_model1 <- logistic_reg() %>% 
+  set_mode("classification") %>% 
+  set_engine("glm")
+
+bird_bath_wf1 <- workflow() %>% 
+  add_recipe(bird_bath_recipe1) %>% 
+  add_model(bird_bath_model1)
+bird_bath_wf1
+```
+
+ 2. A logistic regression model with the same predictors and response, plus a two-way interaction between
+ `urban_rural` and bird_type 
+ 
+```{r WF2}
+bird_bath_recipe2 <- recipe(bird_present ~ urban_rural + bird_type, data = bird_bath) %>%
+  step_dummy(all_nominal_predictors()) %>% 
+  step_interact(~ starts_with("urban_rural_"):starts_with("bird_type_"))
+
+bird_bath_model2 <- logistic_reg() %>% 
+  set_mode("classification") %>% 
+  set_engine("glm")
+
+bird_bath_wf2 <- workflow() %>% 
+  add_recipe(bird_bath_recipe2) %>% 
+  add_model(bird_bath_model2)
+bird_bath_wf2
+```
+Both models are fitted to the `bird_bath` data, with ROC curves displayed in Figure \@ref(fig:ROC)
+
+# ROC Curves
+
+```{r ROC, fig.cap="ROC curves for logisitic regression models."}
+bird_bath_fit1 <- bird_bath_wf1 %>% 
+  fit(bird_bath)
+
+bird_bath_fit2 <- bird_bath_wf2 %>% 
+  fit(bird_bath)
+
+bird_bath_pred1 <- bird_bath %>%
+  bind_cols(predict(bird_bath_fit1, bird_bath),
+            predict(bird_bath_fit1, bird_bath, type = "prob")) %>% 
+  select(bird_present, starts_with(".pred"))
+
+bird_bath_pred2 <- bird_bath %>%
+  bind_cols(predict(bird_bath_fit2, bird_bath),
+            predict(bird_bath_fit2, bird_bath, type = "prob")) %>%
+  select(bird_present, starts_with(".pred"))
+
+roc_1 <- bird_bath_pred1 %>% 
+  roc_curve(truth = bird_present, .pred_no) %>% 
+  mutate(model = "Model 1")
+
+roc_2 <-  bird_bath_pred2 %>% 
+  roc_curve(truth = bird_present, .pred_no) %>% 
+  mutate(model = "Model 2")
+
+roc_bind <- bind_rows(roc_1, roc_2) %>%
+  mutate(model = factor(model, levels = c("Model 1", "Model 2")))
+roc_bind
+ 
+ggplot(roc_bind, aes(x = 1 - specificity, y = sensitivity, color = model)) +
+  geom_line(linewidth = 0.5) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dotted") +
+    scale_color_manual(values = c("Model 1" = "#F66359", "Model 2" = "#1AC5CA")) +
+  labs(color = "model") +
+  coord_equal() +
+  theme_bw() +
+  theme(
+    panel.border = element_rect(color = "black", fill = NA, linewidth = 1),
+    legend.position = "right"
+  )
+```
+
