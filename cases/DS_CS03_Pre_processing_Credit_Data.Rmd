@@ -1,0 +1,191 @@
+---
+title: "Pre-processing: Credit Data"
+author: "Max Glonek"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  html_document:
+    number_sections: yes
+    df_print: paged
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 6, 
+  fig.asp = 0.618, 
+  out.width = "70%",
+  fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(
+  tidyverse, tidymodels, here, 
+  vip, janitor, visdat, naniar, 
+  corrplot
+)
+theme_set(theme_bw())
+wdpath <- getwd()
+# if (Sys.info()[["sysname"]]=="Windows") { # if windows
+#   wdpath <- glue::glue("C:/Users/maxgl/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+# } else if (Sys.info()[["sysname"]]=="Darwin") { # if mac
+#   wdpath <- glue::glue("~/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+# }
+```
+
+# Get data and basic cleaning
+## Read in data
+```{r}
+data(credit_data, package = "modeldata")
+```
+
+## Convert to tibble
+```{r}
+credit_data <- as_tibble(credit_data)
+credit_data
+```
+
+## Clean names
+```{r}
+credit_data <- credit_data %>%
+  clean_names()
+credit_data
+```
+
+# Quick gander
+```{r}
+skimr::skim(credit_data)
+```
+
+# Pre-processing
+Consists of three steps: 
+- recipe
+- prep
+- bake / juice
+
+## Recipe
+### Set up types of variables
+
+```{r}
+credit_recipe <- recipe(status ~ ., data = credit_data)
+credit_recipe
+summary(credit_recipe)
+```
+
+### Add steps
+#### Center and scale
+```{r}
+credit_recipe <- 
+  credit_recipe %>% 
+  step_center(all_numeric()) %>% 
+  step_scale(all_numeric())
+credit_recipe
+```
+
+#### Skewness
+```{r}
+get_skewness <- function(x){
+  # Remove missing
+  x <- x[!is.na(x)]
+  # Get mean
+  x_bar <- mean(x)
+  # Get number of observations
+  n <- length(x)
+  # Calculate v
+  v <- sum( (x - x_bar)^2 ) / (n - 1)
+  # Calculate skewness
+  skewness <- sum( (x - x_bar)^3 ) / ((n - 1) * v^(3/2))
+  return(skewness)
+}
+get_skewness(rnorm(100))
+get_skewness(rexp(100))
+```
+
+```{r}
+credit_data %>%
+  summarise(
+    across(where(is.numeric), get_skewness)
+  )
+```
+
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_BoxCox(all_numeric())
+credit_recipe
+```
+
+#### Missing data
+```{r}
+vis_miss(credit_data)
+```
+
+```{r}
+gg_miss_upset(credit_data)
+```
+
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_impute_mode(all_nominal()) %>%
+  step_impute_mean(all_numeric())
+credit_recipe
+```
+
+#### Near zero
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_nzv(all_predictors())
+credit_recipe
+```
+
+#### Collinearity
+```{r}
+credit_data %>% 
+  select_if(is.numeric) %>% 
+  cor(use = "pairwise.complete.obs") %>% 
+  corrplot()
+```
+
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_corr(all_numeric())
+credit_recipe
+```
+
+#### Dummy
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_dummy(all_nominal(), -status)
+credit_recipe
+```
+
+```{r}
+tidy(credit_recipe)
+tidy(credit_recipe, n = 1)
+```
+
+## Prep recipe
+```{r}
+credit_recipe <- credit_recipe %>%
+  prep(data = credit_data)
+credit_recipe
+```
+
+```{r}
+tidy(credit_recipe)
+tidy(credit_recipe, n = 1)
+```
+
+# Get data
+## Juice
+```{r}
+credit_recipe %>% juice()
+```
+
+## Bake
+```{r}
+credit_recipe %>% bake(credit_data)
+```
