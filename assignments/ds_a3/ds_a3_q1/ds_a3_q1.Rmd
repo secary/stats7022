@@ -1,0 +1,244 @@
+---
+title: "STATS 7022 - Data Science Assignment 3: Question 1"
+author: "Dongju Ma"
+institute: "School of Computer and Mathematical Sciences, University of Adelaide"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  # bookdown::pdf_document2:
+  #   toc: no
+  #   latex_engine: xelatex
+  #   number_sections: false
+  bookdown::html_document2: 
+    number_sections: false
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.618, 
+ out.width = "70%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+
+pacman::p_load(bookdown, kableExtra)
+options(knitr.table.format = "html")
+```
+
+# (a) Read in the data
+```{r data}
+pacman::p_load(tidyverse, tidymodels, kernlab)
+a3 <- read_rds('./data/a3_data.rds')
+a3
+```
+There are 6,000 observations in the original data.
+
+
+# (b) EDA
+```{r skim1}
+skimr::skim(a3) 
+```
+
+# (c) Clear the data
+## i. Data types
+As the output in Table \@ref(tab:skim1), the data type of X1 is character and which should be float.  
+The data type of X1 could be corrected by the following code.
+```{r}
+a3 <- a3 %>% 
+  mutate(X1 = as.numeric(X1))
+```
+
+## ii. Removing numerical outliers
+With the numerical part of Table \@ref(tab:skim1), the P0 of X2 and the P100 of X4 shows there are outliers in these two variables, which could be filtered by the following R code,
+```{r filter_num}
+a3 %>% 
+  filter(X2 < -20)
+a3 %>% 
+  filter(X4 > 20)
+```
+
+and then replace them by NA.
+```{r replace_num}
+a3 <- a3 %>% 
+  mutate(X2 = case_when(X2 >= -20 ~ X2,
+                        TRUE ~ NA)) %>% 
+  mutate(X4 = case_when(X4 <= 20 ~ X4, 
+                        TRUE ~ NA))
+```
+
+## iii. Removing categorical outliers
+As Table \@ref(tab:skim1) shows, Y has 4 levels which should be only 2(A or B), while C2 has 4 levels which should be 3(V, U, T). The following work is to clean the unexpected levels.
+```{r replace_cate}
+a3 <- a3 %>% 
+  mutate(Y = case_when(Y %in% c("A", "B") ~ Y,
+                       TRUE ~ NA)) %>% 
+  mutate(C2 = case_when(C2 %in% c("T", "U", "V") ~ C2,
+                        TRUE ~ NA)) %>% 
+  mutate(Y = factor(Y, levels = c("A", "B"))) %>% 
+  mutate(C2 = factor(C2, levels = c("T", "U", "V")))
+```
+
+## iv. Removing NA
+```{r naomit}
+a3 <- a3 %>% 
+  na.omit() 
+```
+
+## v. Final check
+```{r skim2}
+skimr::skim(a3)
+```
+All the variables are normal and correct, without any missing values, there are now 5614 observations left.
+
+# (d) Recipe
+```{r recipe}
+a3_recipe <- recipe(Y ~ ., data = a3) %>%
+  step_normalize(all_numeric_predictors()) %>% 
+  step_dummy(all_nominal_predictors())
+a3_recipe
+```
+
+# (e) SVM models
+```{r models}
+m1 <- svm_poly(mode = "classification", degree = 3) %>% 
+  set_engine("kernlab") 
+  
+m2 <- svm_rbf(mode = "classification") %>% 
+  set_engine("kernlab")
+```
+
+# (f) Workflows
+```{r wf}
+a3_wf1 <- workflow() %>% 
+  add_recipe(a3_recipe) %>% 
+  add_model(m1)
+
+a3_wf2 <- workflow() %>% 
+  add_recipe(a3_recipe) %>% 
+  add_model(m2)
+```
+
+# (g) Models Fitting
+```{r fit}
+a3_poly <- a3_wf1 %>% 
+  fit(a3)
+a3_poly
+
+a3_radial <- a3_wf2 %>% 
+  fit(a3)
+a3_radial
+
+a3_pred <- a3 %>% 
+  bind_cols(
+    predict(a3_poly, a3),
+    predict(a3_poly, a3, type = "prob")
+    ) %>% 
+  mutate(type = "SVM Poly") %>% 
+  bind_rows(
+    a3 %>% 
+      bind_cols(
+        predict(a3_radial, a3),
+        predict(a3_radial, a3, type = "prob")
+        ) %>% 
+      mutate(type = "SVM Radial")
+  )
+a3_pred
+
+```
+
+# (h) Performance metrics
+## i. Accuracy
+```{r acc}
+acc <- a3_pred %>% 
+  group_by(type) %>% 
+  accuracy(
+    truth = Y, estimate = .pred_class)
+acc
+
+```
+
+## ii. Sensitivity
+```{r sens}
+sens <- a3_pred %>% 
+  group_by(type) %>% 
+  sens(truth = Y, estimate = .pred_class)
+sens
+
+```
+
+## iii. Specificity
+```{r spec}
+spec <- a3_pred %>% 
+  group_by(type) %>% 
+  spec(truth = Y, estimate = .pred_class)
+spec
+
+```
+
+# (i) ROC curve and ROC-AUC
+```{r rocplot, fig.cap = "ROC Curves of SVM models." } 
+a3_pred %>% 
+  group_by(type) %>% 
+  roc_curve(Y,
+            .pred_A) %>% 
+  autoplot()
+
+```
+The AUC of curves are
+```{r auc}
+auc <- a3_pred %>% 
+  group_by(type) %>% 
+  roc_auc(Y, .pred_A)
+auc
+
+```
+
+# (j) Select the model
+```{r metrics, echo=FALSE}
+a3_metrics <- acc %>%
+  select(type, .metric, .estimate) %>%
+  bind_rows(
+    sens %>% select(type, .metric, .estimate),
+    spec %>% select(type, .metric, .estimate),
+    auc %>% select(type, .metric, .estimate)
+  ) %>%
+  pivot_wider(names_from = .metric, values_from = .estimate) 
+a3_metrics %>% 
+  knitr::kable(caption = "Metrics Table for SVM models.") %>% 
+  kable_styling(full_width = TRUE)
+```
+As Table \@ref(tab:metrics) shows, the SVM model with a polynomial kernel performance is better.
+
+# (k) Prediction
+```{r newdata, echo=FALSE}
+new_data <- data.frame(
+  "X1" = -0.11,
+  "X2" = 1.19,
+  "X3" = -1.37,
+  "X4" = -0.46,
+  "C1" = "y",
+  "C2" = "T"
+)
+
+new_data_long <- tibble::enframe(as.list(new_data), name = "Predictor", value = "Value") 
+
+new_data_long %>% 
+  knitr::kable(caption = "New data for Prediction.") %>% 
+  kable_styling(full_width = TRUE)
+```
+Use the SVM model with a polynomial kernel to make prediction of the data in Table \@ref(tab:newdata).
+```{r prediction}
+new_data <- data.frame(
+  "X1" = -0.11,
+  "X2" = 1.19,
+  "X3" = -1.37,
+  "X4" = -0.46,
+  "C1" = "y",
+  "C2" = "T"
+)
+predict(a3_poly, new_data)
+```
+And the result is A.
