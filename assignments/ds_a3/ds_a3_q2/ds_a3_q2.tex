@@ -1,0 +1,169 @@
+\documentclass{article}
+
+\usepackage[a4paper, left=1in, right=1in, top=1in, bottom=1in]{geometry}
+
+\title{STATS 7022 - Data Science Assignment 3: Question 2}
+\author{Dongju Ma}
+\date{Trimester 1, 2025}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fontspec}
+\usepackage{cancel}
+
+\linespread{1.5}
+
+\begin{document}
+
+\maketitle
+
+\section*{(a)}
+Use the formula of integration by parts, 
+\begin{equation*}
+\int u \, dv = uv - \int v \, du.
+\end{equation*}
+Consider $u = ''(x), dv = h''(x)$, so $v = h'(x)$, and makes the following substitution,
+\begin{equation}
+    \int_{a}^{b} g''(x) h''(x) = g''(x)h'(x) \big|_{a}^{b} - \int_{a}^{b} g'''(x) h'(x)dx
+\end{equation}
+As $g(x)$ is a natural cubic spline with $n$ knots, we could break the integral and interval in (2) into $n$ parts, and we have
+\begin{equation}
+    \int_{a}^{b} = \int_{a}^{x_1} + \sum_{j=1}^{n - 1} \left(\int_{x_{j+1}}^{x_j} \right) + \int_{x_n}^{b}.
+\end{equation}
+Hence substituting (2) into (1), we have
+\begin{align}
+    \int_{a}^{b} g''(x) h''(x) = &g''(x)h'(x) \big|_{a}^{x_1} +
+    \sum_{j=1}^{n - 1}\left(g''(x)h'(x) \big|_{x_j}^{x_{j+1}}\right) +
+    g''(x)h'(x) \big|_{x_n}^{b} \notag \\
+    &- 
+    \int_{a}^{x_1} g'''(x)h'(x)dx -
+    \sum_{j=1}^{n - 1} \left(\int_{x_{j+1}}^{x_j} g'''(x) h'(x)dx \right) -
+    \int_{x_n}^{b} g'''(x)h'(x)dx.
+\end{align}
+Q.E.D.
+
+\section*{(b)}
+To show that
+\begin{equation}
+    g''(x)h'(x) \big|_{a}^{x_1} +
+    \sum_{j=1}^{n - 1}\left(g''(x)h'(x) \big|_{x_j}^{x_{j+1}}\right) +
+    g''(x)h'(x) \big|_{x_n}^{b} 
+    = 0.
+\end{equation}
+Recall that $g(x)$ is a natural cubic spline, we have $g''(x) = 0$ at the endpoints $a$ and $b$. \\
+Expand the left-hand side in (4),
+\begin{align*}
+    &g''(x)h'(x) \big|_{a}^{x_1} +\sum_{j=1}^{n - 1}\left(g''(x)h'(x) \big|_{x_j}^{x_{j+1}}\right) +g''(x)h'(x) \big|_{x_n}^{b}  \\
+    = &g''(x_1)h'(x_1) - g''(a)h'(a) + \sum_{j=1}^{n - 1}\left(g''(x_j)h'(x_j) - g''(x_{j+1})h'(x_{j+1})\right) + g''(b)h'(b)  \\
+    = &\cancel{g''(x_1)h'(x_1)} - g''(a)h'(a) + \cancel{g''(x_2)h'(x_2)} - \cancel{g''(x_1)h'(x_1)} + \cdots \\
+    &+ \cancel{g''(x_n)h'(x_n)} -\cancel{ g''(x_{n-1})h'(x_{n-1})} + g''(b)h'(b)  - \cancel{g''(x_n)h'(x_n)} \\
+    = &- g''(a)h'(a) + g''(b)h'(b) \\
+    = &0
+\end{align*}
+Q.E.D.
+\section*{(c)}
+To show that 
+\begin{equation}
+    \int_{a}^{b}g'''(x)h'(x)dx = - \sum_{j=1}^{n-1}\left(\int_{x_j}^{x_{j+1}}g'''(x)h'(x)\right).
+\end{equation}
+Substitute (3) into (4), we have
+\begin{align*}
+    \int_{a}^{b}g'''(x)h'(x)dx = &\int_{a}^{x_1} g'''(x)h'(x)dx -
+    \sum_{j=1}^{n - 1} \left(\int_{x_{j+1}}^{x_j} g'''(x) h'(x)dx 
+    \right) -\int_{x_n}^{b} g'''(x)h'(x)dx 
+\end{align*}
+Using integral by parts on each interval$[x_j, x_{j+1}]$, we have
+\begin{equation}
+    \int_{x_j} ^{x_{j+1}} g'''(x)h'(x)dx = g''(x)h'(x) \big|_{x_j}^{x_{j+1}} - \int_{x_j}^{x_{j+1}} g''(x)h''(x)dx,
+\end{equation}
+summing (6) from $j = 1$ to $n - 1$, we have
+\begin{equation*}
+    \int_{a}^{b}g'''(x)h'(x)dx = 
+    \sum_{j=1}^{n-1}\left[g''(x_{j+1})h'(x_{j+1}) - g''(x_{j})h'(x_{j})\right] - \sum_{j=1}^{n-1}\left(\int_{x_j}^{x_{j+1}}g'''(x)h'(x)\right),
+\end{equation*}
+as we did in (b), we can cancel the terms in the summation, and we have
+\begin{equation*}
+    \int_{a}^{b}g'''(x)h'(x)dx = - \sum_{j=1}^{n-1}\left(\int_{x_j}^{x_{j+1}}g'''(x)h'(x)\right).
+\end{equation*}
+Q.E.D.
+
+
+\section*{(d)}
+Since $g(x)$ is a natural cubic spline, we have $g'''(x)$ is a constant, which could be denoted as $c_j$ on each interval $[x_j, x_j+1]$. 
+Then we have
+\begin{equation}
+    \int_{x_{j}}^{x_{j+1}}g'''(x)h'(x)dx = c_j \int_{x_{j}}^{x_{j+1}}h'(x)dx = c_j \left[h(x_{j+1}) - h(x_j)\right].
+\end{equation}
+Hence $h(x) = \tilde{g}(x) - g(x)$, and $\tilde{g}(x_i) = g(x_i) = y_i$, we have $h(x_i) = 0, \ i = 1, \cdots, n$.
+So (7) could be rewritten as 
+\begin{equation*}
+    \int_{x_{j}}^{x_{j+1}}g'''(x)h'(x)dx = c_j \left[h(x_{j+1}) - h(x_j)\right] = c_j (0 - 0) = 0.
+\end{equation*}
+Thus we have
+\begin{equation*}
+    \int_{a}^{b}g'''(x)h'(x)dx = - \sum_{j=1}^{n-1}\left(c_j \left[h(x_{j+1}) - h(x_j)\right]\right) = 0.
+\end{equation*}
+Q.E.D.
+\section*{(e)}
+Since $\tilde{g}(x) = g(x) + h(x)$, we have $\tilde{g}''(x) = g''(x) + h''(x)$.\\
+And we could also have
+\begin{equation*}
+    \int_{a}^{b} \tilde{g}''(x)^2dx = \int_{a}^{b} g''(x)^2dx + \int_{a}^{b} h''(x)^2dx + 2\int_{a}^{b} g''(x)h''(x)dx.
+\end{equation*}
+As we have shown before,
+\begin{equation*}
+    \int_{a}^{b} g''(x)h''(x)dx = g''(x)h'(x) \big|_{a}^{b} - \int_{a}^{b} g'''(x) h'(x)dx = 0 - 0 = 0.
+\end{equation*}
+Thus we have
+\begin{equation}
+    \int_{a}^{b} \tilde{g}''(x)^2dx = \int_{a}^{b} g''(x)^2dx + \int_{a}^{b} h''(x)^2dx.
+\end{equation}
+As $\int_{a}^{b} h''(x)^2dx$ must be non-negative, we have
+\begin{equation*}
+    \int_{a}^{b} \tilde{g}''(x)^2dx \geq \int_{a}^{b} g''(x)^2dx.
+\end{equation*}
+Q.E.D.
+\section*{(f)}
+From (8), we have
+\begin{equation*}
+    \int_{a}^{b} \tilde{g}''(x)^2dx = \int_{a}^{b} g''(x)^2dx + \int_{a}^{b} h''(x)^2dx.
+\end{equation*}
+\begin{itemize}
+    \item \textbf{Sufficiency} \\
+        If $h(x) = 0$, then accordingt to (8) we could obtain 
+        \begin{equation*}
+            \int_{a}^{b} \tilde{g}''(x)^2dx = \int_{a}^{b} g''(x)^2dx + 0 = \int_{a}^{b} g''(x)^2dx.
+        \end{equation*}
+    \item \textbf{Necessity}\\
+        If $\int_{a}^{b} \tilde{g}''(x)^2dx = \int_{a}^{b} g''(x)^2dx$, then according to (8), 
+        \begin{equation*}
+            \int_{a}^{b} h''(x)^2dx = 0.
+        \end{equation*}
+        Hence $h''(x)^2 \geq 0$, then $h''(x) = 0$ for all $a < x <b$. \\
+        Thus $h(x)$ is a linear function, as we have $h(x_i) = 0, \ i = 1, \cdots, n$. \\
+        So $h(x)$ is a linear function with $n$ knots, and it must be a constant function. \\
+        Hence $h(x) = 0$ for all $x \in (a, b)$. \\
+\end{itemize}
+So if and only if $h(x) = 0 \text{for all } a < x < b$ can we have 
+\begin{equation*}
+    \int_{a}^{b} \tilde{g}''(x)^2dx = \int_{a}^{b} g''(x)^2dx. 
+\end{equation*}
+
+\section*{(g)}
+To show that the natural cubic spline is the unique function of
+\begin{equation*}
+    \hat{f}(x) = \min_{f} \left\{\sum_{i=1}^{n}(y_i - f(x_i))^2 + \lambda \int_{a}^{b} f''(x)^2dx \right\}
+\end{equation*}
+As the property of the natural cubic spline, we have $f(x_i) = y_i $. Thus we have
+\begin{equation*}
+    \sum_{i=1}^{n}(y_i - f(x_i))^2 = 0.
+\end{equation*}
+For any other function $\tilde{f}(x)$ which is not a natural cubic spline, could not satisfy the above equation. \\
+From (e) and (f), for any other function $\tilde{f}(x)$ satisfying $\tilde{f}(x_i) = y_i$, we have
+\begin{equation*}
+    \int_{a}^{b} \tilde{f}''(x)^2dx \geq \int_{a}^{b} f''(x)^2dx.  
+\end{equation*}
+Where $f(x)$ is the natural cubic spline interpolating $y_i$ at $x_i$. \\
+So if and only if $\tilde{f}(x) = f(x)$, we can minimize the integral $\int_{a}^{b} \tilde{f}''(x)^2dx$. \\
+Thus $f(x)$ must be a natural cubic spline which has knots at $x_1, \cdots, x_n$.
+\end{document}
