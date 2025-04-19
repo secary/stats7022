@@ -1,0 +1,125 @@
+---
+title: "Principal Component Analysis: Spotify"
+author: "Max Glonek"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output: 
+  html_document:
+    number_sections: yes
+    df_print: paged
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.618, 
+ out.width = "70%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(tidyverse, tidymodels, tidytuesdayR, paletteer)
+theme_set(theme_bw())
+# if (Sys.info()[["sysname"]]=="Windows") { # if windows
+#   wdpath <- glue::glue("C:/Users/maxgl/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+# } else if (Sys.info()[["sysname"]]=="Darwin") { # if mac
+#   wdpath <- glue::glue("~/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+# }
+wdpath <- getwd()
+```
+
+# Read in data
+
+```{r}
+spotify <- read_rds(glue::glue("{wdpath}/data/spotify.rds"))
+spotify
+```
+
+# Clean up
+
+```{r}
+spotify <- 
+  spotify %>% 
+  select(danceability:duration_ms, genre = playlist_genre)
+spotify
+```
+
+```{r, message=FALSE}
+pacman::p_load(corrplot)
+spotify %>% 
+  select(danceability:duration_ms) %>% 
+  cor(use = "pairwise.complete.obs") %>% 
+  corrplot()
+```
+
+# PCA
+
+```{r}
+spotify_prep <- 
+  spotify %>% 
+  recipe(genre ~ .) %>% 
+  step_normalize(all_predictors()) %>% 
+  step_pca(all_predictors(), num_comp = 4) %>% 
+  prep()
+spotify_prep
+```
+
+# Loadings plot
+
+```{r, message=FALSE}
+pacman::p_load(tidytext)
+spotify_prep %>% 
+  tidy(n = 2) %>% 
+  filter(component %in% c("PC1", "PC2", "PC3", "PC4")) %>% 
+  group_by(component) %>% 
+  top_n(5) %>% 
+  mutate(
+    terms_order = reorder_within(terms, abs(value), component)
+  ) %>% 
+  ggplot(
+    aes(value, terms_order, fill = terms) 
+  ) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~component, scales = "free_y") + 
+  scale_y_reordered()
+```
+
+# First two PC
+
+```{r}
+spotify_prep %>% 
+  juice() %>% 
+  ggplot(aes(PC1, PC2, col = genre))  + 
+  geom_point(alpha = 0.7) + 
+  scale_color_paletteer_d("calecopal::superbloom3")
+```
+
+```{r}
+spotify_prep %>% 
+  juice() %>% 
+  ggplot(aes(PC1, fill = genre))  + 
+  geom_density(alpha = 0.5) + 
+  scale_fill_paletteer_d("calecopal::superbloom3")
+```
+
+# Skree plot
+
+```{r}
+sdev <- spotify_prep$steps[[2]]$res$sdev
+
+percent_variation <- sdev^2 / sum(sdev^2)
+percent_variation
+
+tibble(
+  component = str_c("PC", 1:length(percent_variation)),
+  percent_var = percent_variation
+) %>%
+  mutate(component = fct_inorder(component)) %>%
+  ggplot(aes(component, percent_var)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = NULL, y = "Percent variance explained by each PCA component")
+```

@@ -1,0 +1,150 @@
+---
+title: |
+    | STATS 7022 - Data Science
+    | Workshop 6: Nested Data Frames
+author: "Max Glonek"
+institute: "School of Computer and Mathematical Sciences, University of Adelaide"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  html_document: default
+  beamer_presentation: 
+    includes: 
+      in_header: header.tex
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 6,
+  fig.asp = 0.618,
+  out.width = "100%",
+  fig.align = "center",
+  root.dir = '../'
+)
+```
+
+## Set-Up
+```{r}
+pacman::p_load(tidyverse)
+```
+
+## Lists
+In `R`, elements of a vector must all be the same type, e.g., numeric, integer, boolean, character.
+
+By contrast, a list is a collection of objects of *any* type.
+
+We have been using lists all along. `data.frame` and `tibble` are both examples of lists (with some cleverness applied under the hood).
+
+Lists behave much like other objects in `R`, but are indexed with `[[ ]]`.
+
+## Map Functions
+A `map()` function takes a list as input, does *something*, and returns a list.
+
+```{r}
+lst <- list(1:10, c(2, 4))
+lst %>% map(mean)
+```
+
+## Dialects of Map
+Sometimes you don't want to return a list, e.g., return results as a vector with `double` precision.
+
+```{r}
+lst %>% map_dbl(mean)
+```
+
+## Fast Functions
+```{r}
+lst %>% map(~.x + 3)
+```
+
+## Data
+\small
+```{r}
+pacman::p_load(gapminder)
+data(gapminder)
+gapminder
+```
+
+## Life Expectancy
+```{r, echo=FALSE}
+gapminder %>%
+  ggplot(aes(year, lifeExp, group = country)) +
+  geom_line(alpha = 1/5)
+```
+
+## Nest by Country
+\scriptsize
+```{r}
+gapminder_nest <- gapminder %>%
+  group_by(country, continent) %>%
+  nest()
+gapminder_nest
+```
+
+## Getting the Data Back for Each Country
+\small
+```{r}
+gapminder_nest$data[[1]]
+```
+
+## A Regression Function
+Here's a function to fit a linear regression of life expectancy on year for data contained within *some* data.frame.
+
+```{r}
+fit_lm <- function(df){
+  lm(lifeExp ~ year, data = df)
+}
+```
+
+## Lots of Linear Models
+```{r}
+gapminder_nest <- gapminder_nest %>%
+  mutate(model = map(data,
+                     fit_lm))
+```
+
+## Getting the Model Back for Each Country
+```{r}
+gapminder_nest$model[[1]]
+```
+
+## Getting the Residuals
+```{r}
+gapminder_nest <- gapminder_nest %>%
+  mutate(residuals = map(model,
+                         broom::augment))
+```
+
+## Unnesting the Data Frame
+\tiny
+```{r}
+gapminder_nest %>%
+  unnest(residuals)
+```
+
+## Task
+```{r, echo=TRUE}
+gapminder %>% 
+  mutate(
+    year = year - mean(year)
+  ) %>% 
+  group_by(
+    country, continent
+  ) %>% 
+  nest() %>% 
+  mutate(
+    model = map(data, fit_lm), 
+    coef = map(model, broom::tidy)
+  ) %>% 
+  unnest(coef) %>% 
+  select(country, continent, term, estimate) %>% 
+  pivot_wider(names_from = term, values_from = estimate) %>% 
+  rename(intercept = `(Intercept)`, slope = year) %>% 
+  ggplot(aes(intercept, slope, col = continent, shape = continent)) + 
+  geom_point() + 
+  viridis::scale_colour_viridis(option="viridis", discrete=TRUE)
+```
