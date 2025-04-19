@@ -1,0 +1,213 @@
+---
+title: "Support Vector Machine: Board Game"
+author: "Max Glonek"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output: 
+  html_document:
+    number_sections: yes
+    df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.618, 
+ out.width = "70%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(tidyverse, tidymodels, tidytuesdayR, harrypotter)
+theme_set(theme_bw())
+# if (Sys.info()[["sysname"]]=="Windows") { # if windows
+#   wdpath <- glue::glue("C:/Users/maxgl/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+# } else if (Sys.info()[["sysname"]]=="Darwin") { # if mac
+#   wdpath <- glue::glue("~/Box Sync/DS_{format(Sys.time(),'%y')}_T{if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}}")
+# }
+wdpath <- getwd()
+```
+
+# Load data
+
+```{r, eval = FALSE}
+tuesdata <- tidytuesdayR::tt_load("2019-03-12")
+board <- tuesdata$board_games
+write_rds(board, glue::glue("{wdpath}/data/board.rds"))
+```
+
+```{r}
+board <- read_rds(glue::glue("{wdpath}/data/board.rds"))
+```
+
+# Clean up
+
+```{r}
+board <- 
+  board %>% 
+  select(
+    rating = average_rating, 
+    time = playing_time, 
+    year = year_published
+  )
+board
+```
+
+```{r}
+board %>% ggplot(aes(time)) + geom_histogram(col = "black", fill = "orange")
+```
+
+```{r}
+board <- 
+  board %>% 
+  filter(time > 0, time <= 360)
+```
+
+```{r}
+board %>% ggplot(aes(time)) + geom_histogram(col = "black", fill = "orange")
+```
+
+
+
+Convert rating into three levels
+
+```{r}
+board <- 
+  board %>% 
+  mutate(
+    rating = cut_number(
+      rating, 3, 
+      labels = c("pants", "yeah", "wow")
+    )
+  )
+```
+
+
+# EDA
+
+```{r}
+board %>% 
+  ggplot(aes(year, time, 
+             col = rating)) + 
+  geom_point(alpha = 0.7) + 
+  scale_colour_hp(house = "ravenclaw", discrete = TRUE)
+  
+```
+
+```{r}
+board %>% 
+  ggplot(aes(year, time, 
+             col = rating)) + 
+  geom_density_2d() + 
+  scale_colour_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+# Model
+
+```{r}
+board_wf <- 
+  workflow() %>% 
+  add_recipe(
+    recipe(rating ~ ., data = board) %>% 
+      step_log(time)
+  ) %>% 
+  add_model(
+    svm_poly(mode = "classification", degree = 2) %>% 
+      set_engine("kernlab")
+  )
+```
+
+```{r, cache=TRUE}
+board_M1 <- board_wf %>% fit(board)
+board_M1
+```
+
+
+```{r, cache=TRUE}
+board_M2 <- 
+  board_wf %>% 
+  update_model(
+    svm_rbf(mode = "classification") %>% 
+      set_engine("kernlab")
+  ) %>% 
+  fit(board)
+```
+
+
+```{r, cache=TRUE}
+board_M3 <- 
+  board_wf %>% 
+  update_model(
+    rand_forest(mode = "classification") %>% 
+      set_engine("ranger")
+  ) %>% 
+  fit(board)
+```
+
+# Predict
+
+```{r}
+newdata <- crossing(
+  year = seq(1980, 2016, length = 100),
+  time = seq(1, 360, length = 100)
+)
+```
+
+
+```{r}
+newdata %>% 
+  add_column(
+    predict(board_M1, new_data = newdata)
+  ) %>% 
+  ggplot(aes(year, time, fill = .pred_class)) + 
+  geom_hex() + 
+  scale_fill_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+
+```{r}
+newdata %>% 
+  add_column(
+    predict(board_M2, new_data = newdata)
+  ) %>% 
+  ggplot(aes(year, time, fill = .pred_class)) + 
+  geom_hex() + 
+  scale_fill_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+```{r}
+newdata %>% 
+  add_column(
+    predict(board_M3, new_data = newdata)
+  ) %>% 
+  ggplot(aes(year, time, fill = .pred_class)) + 
+  geom_hex() + 
+  scale_fill_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+
+```{r}
+board %>% 
+  add_column(
+    predict(board_M1, new_data = board, type = "prob")
+  ) %>% 
+  mutate(type = "SVM poly") %>% 
+  bind_rows(
+    board %>% 
+      add_column(
+        predict(board_M2, new_data = board, type = "prob")
+      ) %>% 
+      mutate(type = "SVM radial")
+  ) %>% 
+  bind_rows(
+    board %>% 
+      add_column(
+        predict(board_M3, new_data = board, type = "prob")
+      ) %>% 
+      mutate(type = "RF")
+  ) %>% 
+  group_by(type) %>% 
+  roc_curve(rating, starts_with(".pred")) %>% 
+  autoplot()
+```

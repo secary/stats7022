@@ -1,0 +1,216 @@
+---
+title: "Ridge Regression: The Office"
+author: "Max Glonek"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output:
+  html_document:
+    number_sections: yes
+    df_print: paged
+    toc: true
+    toc_float: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+ echo = TRUE, 
+ fig.width = 6, 
+ fig.asp = 0.618, 
+ out.width = "70%",
+ fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(tidyverse, tidymodels, tidytuesdayR, schrute, glmnet, plotly,
+               vip, paletteer)
+theme_set(theme_bw())
+```
+
+# Read in data
+
+```{r}
+data("theoffice", package = "schrute")
+office <- theoffice
+office
+```
+
+So each row is a line from the script, we also have info about season, episode etc. 
+
+Want to predict rating from how much each character speaks. 
+
+# Characters
+
+How many characters?
+
+```{r}
+length(unique(office$character))
+```
+
+Too many, so we will collapse down
+
+```{r}
+office <- 
+  office %>% 
+  mutate(
+    character = fct_lump_n(character, 20)
+  )
+unique(office$character)
+```
+
+# Cleaning
+
+First count the number of lines for each character. 
+
+```{r}
+office_long <- 
+  office %>% 
+  group_by(season, episode, character) %>% 
+  summarise(
+    n_lines = n(), 
+    rating = mean(imdb_rating)
+  )
+office_long
+```
+
+Now convert to wide form
+
+```{r}
+office_wide <- 
+  office_long %>% 
+  pivot_wider(
+    names_from = character, 
+    values_from = n_lines, 
+    values_fill = 0
+  )
+office_wide
+```
+
+# Split
+
+```{r}
+office_split <- initial_split(office_wide, strata = rating)
+office_train <- training(office_split)
+office_test <- testing(office_split)
+```
+
+# Preprocessing
+
+```{r}
+office_recipe <- 
+  recipe(rating ~ ., data = office_train) 
+office_recipe
+```
+
+Set ID columns
+
+```{r}
+office_recipe <- 
+  office_recipe %>% 
+  update_role(season,episode, new_role = "ID")
+office_recipe
+```
+
+Scale and center
+
+```{r}
+office_recipe <- 
+  office_recipe %>% 
+  step_center(all_predictors()) %>% 
+  step_scale(all_predictors())
+```
+
+Check 
+
+```{r}
+office_recipe %>% prep() %>% juice()
+office_recipe %>% prep() %>% juice() %>% select(rating)
+```
+
+# Fit ridge regression
+
+## Set model
+
+```{r}
+office_model <- 
+  linear_reg(mixture = 0, penalty = 0.1) %>% 
+  set_engine("glmnet")
+```
+
+Note still uses lots of lambdas - see fit. Penalty only used for prediction. 
+
+## Create workflow
+
+```{r}
+office_wf <- 
+  workflow() %>% 
+  add_recipe(office_recipe) %>% 
+  add_model(office_model)
+office_wf
+```
+
+## Fit workflow
+
+```{r}
+office_ridge <- 
+  office_wf %>% 
+  fit(office_train)
+office_ridge
+```
+
+```{r}
+p <- office_ridge %>% 
+  extract_fit_parsnip() %>% 
+  .$fit  %>% 
+  tidy() %>% 
+  filter(
+    term != "(Intercept)", 
+    lambda < 100
+  ) %>% 
+  ggplot(aes(lambda, estimate, col = term)) + 
+  geom_line() 
+p
+```
+
+```{r}
+ggplotly(p)
+```
+
+# Predict
+
+## Train RMSE
+
+```{r}
+office_train %>% 
+  add_column(
+    predict(office_ridge, new_data = office_train)
+  ) %>% 
+  ungroup() %>% 
+  rmse(rating, .pred)
+```
+
+## Test RMSE
+
+```{r}
+office_test %>% 
+  add_column(
+    predict(office_ridge, new_data = office_test)
+  ) %>% 
+  ungroup() %>% 
+  rmse(rating, .pred)
+```
+
+# VIP
+
+```{r}
+office_ridge %>% 
+  pull_workflow_fit() %>% 
+  vi() %>% 
+  ggplot(aes(Importance, fct_reorder(Variable, Importance), fill = Sign)) + 
+  geom_col() + 
+  labs(y = "Character") + 
+  scale_fill_paletteer_d("dutchmasters::milkmaid")
+```
+
+```{r}
+sessionInfo()
+```
