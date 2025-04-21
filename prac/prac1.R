@@ -79,7 +79,7 @@ predict(mpg_fit, new_data = q8)
 
 # Variable Importance Plots (VIP)
 mpg_fit %>% extract_fit_parsnip() %>% vip()
-mpg_fit %>% extract_fit_parsnip() %>% vi()
+mpg_fit %>% extract_fit_parsnip() %>% vip()
 
 # Assess the Model Fit Using the Test Data
 metrics <- metric_set(rmse, rsq)
