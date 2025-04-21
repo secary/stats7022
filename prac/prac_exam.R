@@ -72,8 +72,8 @@ df_fit %>%
   extract_fit_parsnip() %>% 
   tidy()
 
-df_fit_fin <- df_wf_fin %>% 
-  fit(df_train)
+df_model <- df_wf_fin %>% 
+  fit(df_train) 
 
 pred_data <- data.frame(
   X1 = -1,
@@ -84,5 +84,5 @@ pred_data <- data.frame(
   C2 = factor("X", levels = c("W", "X", "Y", "Z"))
 )
 
-pred_value <- predict(df_fit_fin, pred_data)
+pred_value <- predict(df_model, pred_data)
 pred_value
