@@ -1,0 +1,419 @@
+---
+title: "STATS 7022 - Data Science <br>
+ Seminar 12: Fitting Models (Solutions)"
+author: "Max Glonek"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    number_sections: true
+    toc_depth: 3
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 6, 
+  fig.asp = 0.618, 
+  out.width = "70%",
+  fig.align = "center", 
+  root.dir = '../',
+  warning=FALSE
+)
+pacman::p_load(
+  bookdown, ggplot2
+)
+theme_set(theme_bw())
+wdpath <- getwd()
+```
+
+# Load the Data and Libraries
+```{r}
+pacman::p_load(tidyverse, tidymodels, discrim, magrittr)
+data <- read_rds("./data/data.rds")
+```
+
+#  Regression Models
+## Linear Regression With Interaction Term
+```{r}
+# fit the model
+lm_1 <- lm(X2 ~ X1*X3, data = data)
+
+# fit with tidymodels
+recipe_lm <- recipe(X2 ~ ., data = data) %>%
+  step_interact(terms = ~ X1:X3)
+recipe_lm %>% prep() %>% bake(new_data = NULL)
+```
+
+
+```{r}
+model_lm <- linear_reg() %>% 
+  set_engine("lm")
+workflow_lm <- workflow() %>%
+  add_recipe(recipe_lm) %>%
+  add_model(model_lm)
+fit_lm <- workflow_lm %>%
+  fit(data)
+fit_lm %>% tidy()
+```
+
+```{r}
+# model summary
+ summary(lm_1)
+```
+
+```{r}
+# tidymodels summary
+fit_lm %>% extract_fit_parsnip() %>% pluck("fit") %>% summary()
+```
+
+```{r}
+metrics <- metric_set(rmse,rsq)
+ (metrics_lm <- data %>% add_column(predict(fit_lm,data)) %>% metrics(truth = X2, estimate = .pred))
+```
+
+```{r}
+ # visualise the data
+ data %>%
+ ggplot(aes(x = X1, y = X2, colour = X3)) +
+ geom_point() +
+ geom_smooth(method="lm")
+```
+
+```{r}
+# check the assumptions
+ plot(lm_1)
+```
+
+# Classification Models
+##  Support Vector Machine With Gaussian Radial Basis Function Kernel
+
+```{r}
+# fit the model
+svm_r <- recipe(X3 ~., data = data)
+svm_m <- svm_rbf() %>%
+  set_mode("classification") %>%
+  set_engine("kernlab")
+svm_wf <- workflow() %>%
+  add_recipe(svm_r) %>%
+  add_model(svm_m)
+svm_fit <- svm_wf %>%
+  fit(data)
+
+# model summary
+svm_fit %>% extract_fit_parsnip() %>% pluck("fit")
+```
+
+```{r}
+# visualise the data
+new_data <- expand.grid(
+  X1 = seq(min(data$X1), max(data$X1), length.out = 200),
+  X2 = seq(min(data$X2), max(data$X2), length.out = 200)
+)
+
+new_data  %>%
+  add_column(predict(svm_fit, new_data = new_data)) %>%
+  ggplot(aes(x=X1,y=X2,fill=.pred_class)) +
+  geom_tile() +
+  labs(fill = "X3",
+       x = "X1",
+       y = "X2") +
+  theme_bw() +
+  viridis::scale_fill_viridis(option="G",
+                              begin = 1/6,
+                              end = 5/6,
+                              discrete=TRUE)
+```
+
+
+```{r}
+# measure performance
+svm_pred <- data %>%
+  bind_cols(predict(svm_fit, data),
+            predict(svm_fit, data, type = "prob"))
+svm_pred %>% conf_mat(truth = X3,
+                      estimate = .pred_class)
+
+svm_pred %>% yardstick::roc_curve(truth = X3,
+                                  .pred_0) %>%
+  autoplot()
+```
+
+# LDA Without Interaction Term
+
+```{r}
+# fit the model
+lda_r1 <- recipe(X3 ~ ., data = data)
+lda_m1 <- discrim_linear() %>%
+  set_mode("classification") %>%
+  set_engine("MASS")
+lda_wf1 <- workflow() %>%
+  add_recipe(lda_r1) %>%
+  add_model(lda_m1)
+lda_fit1 <- lda_wf1 %>%
+  fit(data)
+
+# model summary
+lda_fit1 %>% extract_fit_parsnip() %>% pluck("fit")
+```
+
+```{r}
+# visualise the data
+new_data %>%
+  add_column(predict(lda_fit1, new_data = new_data)) %>%
+  ggplot(aes(x=X1,y=X2,fill=.pred_class)) +
+  geom_tile() +
+  labs(fill = "X3",
+       x = "X1",
+       y = "X2") +
+  theme_bw() +
+  viridis::scale_fill_viridis(option="G",
+                              begin = 1/6,
+                              end = 5/6,
+                              discrete=TRUE)
+```
+
+```{r}
+# measure performance
+lda_pred1 <- data %>%
+  bind_cols(predict(lda_fit1, data),
+            predict(lda_fit1, data, type = "prob"))
+lda_pred1 %>% conf_mat(truth = X3,
+                       estimate = .pred_class)
+
+lda_pred1 %>% yardstick::roc_curve(truth = X3,
+                                   .pred_0) %>%
+  autoplot()
+```
+
+# LDA With Interaction Term
+
+```{r}
+# fit the model
+lda_r2 <- recipe(X3 ~ ., data = data) %>%
+  step_interact(terms = ~ X1:X2)
+lda_m2 <- discrim_linear() %>%
+  set_mode("classification") %>%
+  set_engine("MASS")
+lda_wf2 <- workflow() %>%
+  add_recipe(lda_r2) %>%
+  add_model(lda_m2)
+lda_fit2 <- lda_wf2 %>%
+  fit(data)
+
+# model summary
+lda_fit2 %>% extract_fit_parsnip() %>% pluck("fit")
+```
+
+```{r}
+# visualise the data
+new_data %>%
+  add_column(predict(lda_fit2, new_data = new_data)) %>%
+  ggplot(aes(x=X1,y=X2,fill=.pred_class)) +
+  geom_tile() +
+  labs(fill = "X3",
+       x = "X1",
+       y = "X2") +
+  theme_bw() +
+  viridis::scale_fill_viridis(option="G",
+                              begin = 1/6,
+                              end = 5/6,
+                              discrete=TRUE)
+```
+
+```{r}
+# measure performance
+lda_pred2 <- data %>%
+  bind_cols(predict(lda_fit2, data),
+            predict(lda_fit2, data, type = "prob"))
+lda_pred2 %>% conf_mat(truth = X3,
+                       estimate = .pred_class)
+
+lda_pred2 %>% yardstick::roc_curve(truth = X3,
+                                   .pred_0) %>%
+  autoplot()
+```
+
+# QDA
+```{r}
+# fit the model
+qda_r <- recipe(X3 ~ ., data = data)
+qda_m <- discrim_quad() %>%
+  set_mode("classification") %>%
+  set_engine("MASS")
+qda_wf <- workflow() %>%
+  add_recipe(qda_r) %>%
+  add_model(qda_m)
+qda_fit <- qda_wf %>%
+  fit(data)
+
+# model summary
+qda_fit %>% extract_fit_parsnip() %>% pluck("fit")
+```
+
+```{r}
+# visualise the data
+new_data %>%
+  add_column(predict(qda_fit, new_data = new_data)) %>%
+  ggplot(aes(x=X1,y=X2,fill=.pred_class)) +
+  geom_tile() +
+  labs(fill = "X3",
+       x = "X1",
+       y = "X2") +
+  theme_bw() +
+  viridis::scale_fill_viridis(option="G",
+                              begin = 1/6,
+                              end = 5/6,
+                              discrete=TRUE)
+```
+
+```{r}
+# measure performance
+qda_pred <- data %>%
+  bind_cols(predict(qda_fit, data),
+            predict(qda_fit, data, type = "prob"))
+qda_pred %>% conf_mat(truth = X3,
+                      estimate = .pred_class)
+
+qda_pred %>% yardstick::roc_curve(truth = X3,
+                                  .pred_0) %>%
+  autoplot()
+```
+
+# Logistic Regression
+```{r}
+# fit the model
+lr_r <- recipe(X3 ~ ., data = data)
+lr_m <- logistic_reg() %>%
+  set_mode("classification") %>%
+  set_engine("glm")
+lr_wf <- workflow() %>%
+  add_recipe(lr_r) %>%
+  add_model(lr_m)
+lr_fit <- lr_wf %>%
+  fit(data)
+
+# model summary
+lr_fit %>% extract_fit_parsnip() %>% pluck("fit")
+```
+
+```{r}
+# visualise the data
+new_data %>%
+  add_column(predict(lr_fit, new_data = new_data)) %>%
+  ggplot(aes(x=X1,y=X2,fill=.pred_class)) +
+  geom_tile() +
+  labs(fill = "X3",
+       x = "X1",
+       y = "X2") +
+  theme_bw() +
+  viridis::scale_fill_viridis(option="G",
+                              begin = 1/6,
+                              end = 5/6,
+                              discrete=TRUE)
+```
+
+```{r}
+# measure performance
+lr_pred <- data %>%
+  bind_cols(predict(lr_fit, data),
+            predict(lr_fit, data, type = "prob"))
+lr_pred %>% conf_mat(truth = X3,
+                     estimate = .pred_class)
+
+lr_pred %>% yardstick::roc_curve(truth = X3,
+                                 .pred_0) %>%
+  autoplot()
+```
+
+#  Comparing Model Performance
+```{r}
+# get predictions
+preds <- rbind(lda_pred1 %>% add_column(model = "LDA +"),
+               lda_pred2 %>% add_column(model = "LDA x"),
+               qda_pred %>% add_column(model = "QDA"),
+               svm_pred %>% add_column(model = "SVM (RBF)"),
+               lr_pred %>% add_column(model = "Logsitic Reg"))
+
+
+# plot ROC curves
+roc_df <- preds %>%
+  group_by(model) %>%
+  group_map(~ yardstick::roc_curve(.x, truth = X3, .pred_0) %>% mutate(model = .y$model)) %>%
+  bind_rows()
+
+ggplot(roc_df, aes(x = 1 - specificity, y = sensitivity, color = model)) +
+  geom_path(size = 1) +
+  viridis::scale_color_viridis(option = "D", begin = 1/6, end = 5/6, discrete = TRUE) +
+  geom_abline(lty = 2) +
+  coord_equal() +
+  theme_bw()
+```
+
+```{r}
+# auc
+preds %>%
+  group_by(model) %>%
+  group_map(~ yardstick::roc_auc(.x, truth = X3, .pred_0) %>%
+              mutate(model = .y$model)) %>%
+  bind_rows()
+```
+
+#  Which Model Should We Choose?
+ The LDA model without an interaction term is clearly rubbish, as is the logistic regression model. We should notuse either of these models. It might be worth fitting a logistic regression model with an interaction term - I
+ suspect it would perform quite well.
+```{r}
+# assumption checking for LDA/QDA
+
+## group 0
+### X1 qqplot
+qqnorm(data$X1[data$X3==0])
+qqline(data$X1[data$X3==0])
+```
+
+```{r}
+### X2 qqplot
+qqnorm(data$X2[data$X3==0])
+qqline(data$X2[data$X3==0])
+```
+
+```{r}
+### variances and correlation
+var(data$X1[data$X3==0])
+
+var(data$X2[data$X3==0])
+
+cor(data$X1[data$X3==0],data$X2[data$X3==0])
+```
+
+```{r}
+## group 1
+### X1 qqplot
+qqnorm(data$X1[data$X3==1])
+qqline(data$X1[data$X3==1])
+```
+
+```{r}
+### X2 qqplot
+qqnorm(data$X2[data$X3==1])
+qqline(data$X2[data$X3==1])
+```
+
+```{r}
+### variances and correlation
+var(data$X1[data$X3==1])
+
+var(data$X2[data$X3==1])
+
+cor(data$X1[data$X3==1],data$X2[data$X3==1])
+```
+
+ LDA assumes multivariate normal for each group - qqplots show this assumption is reasonable. LDA also assumes constant variance/covariance structure for all groups - comparing $cor(X_1, X_2)$ for each group shows this assumption is unreasonable. Thus, we should not use LDA.
+
+ QDA relaxes the assumption of constant variance/covariance structure, so would be a reasonable model to choose in this instance. SVM would also be a reasonable model, though its performance is marginally worse than QDA, and we may want to choose our kernel more carefully
+
+
+ 

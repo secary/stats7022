@@ -1,0 +1,1507 @@
+---
+title: "Cases of Data Science PG"
+author: "Secary M"
+date: "Trimester `r if(as.integer(format(Sys.time(),'%m'))<5){1}else if(as.integer(format(Sys.time(),'%m'))<9){2}else{3}`, `r format(Sys.time(),'%Y')`"
+output: 
+  bookdown::html_document2:
+    toc: true
+    toc_float: true
+    number_sections: true
+    toc_depth: 3
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 6, 
+  fig.asp = 0.618, 
+  out.width = "70%",
+  fig.align = "center", 
+  root.dir = '../'
+)
+pacman::p_load(
+  bookdown,
+  tidyverse, tidymodels, janitor, paletteer, vip, 
+  visdat, naniar, corrplot, plotly, ggridges, viridis, magrittr,
+  here, visNetwork, glmnet,
+  tidytuesdayR, schrute, harrypotter, ISLR, titanic
+)
+theme_set(theme_bw())
+wdpath <- getwd()
+```
+
+# DS_CS01_Linear_Regression_Fuel_Economy
+
+## Case study
+
+#### Set up libraries
+
+```{r}
+pacman::p_load(
+  tidyverse, 
+  tidymodels,
+  AppliedPredictiveModeling, 
+  skimr, 
+  janitor, 
+  corrplot, 
+  vip
+)
+```
+
+#### Read in data
+
+```{r}
+data(FuelEconomy, package = "AppliedPredictiveModeling")
+```
+
+
+#### Pre-processing
+
+###### Convert to tibble
+
+```{r}
+cars2010 <- as_tibble(cars2010)
+```
+
+###### Clean names and select predictors
+
+```{r}
+cars2010 <- clean_names(cars2010)
+cars2010 <- 
+  cars2010 %>% 
+  select(
+    eng_displ, 
+    num_cyl, 
+    FE = fe, 
+    num_gears, 
+    drive_desc
+  )
+cars2010
+```
+
+###### Recode the drive predictor
+
+```{r}
+cars2010 %>% 
+  count(drive_desc)
+cars2010<- 
+  cars2010 %>% 
+  mutate(
+    drive = case_when(
+      str_detect(drive_desc, "Front") ~ "front", 
+      str_detect(drive_desc, "Rear") ~ "rear", 
+      TRUE ~ "4WD"
+    ))
+cars2010 %>% 
+  count(drive_desc, drive)
+cars2010 <- 
+  cars2010 %>% 
+  select(-drive_desc)
+cars2010
+```
+
+###### Convert character into factor
+
+```{r}
+cars2010 <- 
+  cars2010 %>% 
+  mutate_if(
+    is.character, factor
+  )
+cars2010
+```
+
+
+###### Split into training and testing
+
+```{r}
+set.seed(2020)
+car_split <- initial_split(cars2010, strata = FE)
+car_train <- training(car_split)
+car_test <- testing(car_split)
+```
+
+
+#### EDA
+
+###### Overview
+
+```{r}
+skim(car_train)
+```
+
+
+###### Look at Fuel efficiency
+
+```{r}
+car_train %>% 
+  ggplot(aes(FE)) + 
+  geom_histogram(col = "black", fill = "orange")
+```
+
+###### Bivariate relationships
+
+```{r}
+car_train %>% 
+  ggplot(aes(eng_displ, FE)) + 
+  geom_point()
+```
+
+```{r}
+car_train %>% 
+  ggplot(aes(factor(num_cyl), FE)) + 
+  geom_boxplot()
+```
+
+```{r}
+car_train %>% 
+  ggplot(aes(factor(num_gears), FE)) + 
+  geom_boxplot()
+```
+
+```{r}
+car_train %>% 
+  ggplot(aes(drive, FE)) + geom_boxplot()
+```
+
+###### Relationship between predictors
+
+```{r}
+car_train %>% 
+  select_if(is.numeric) %>% 
+  cor() %>% 
+  corrplot()
+```
+
+
+###### Preprocessing with recipes
+
+```{r}
+car_recipe <- 
+  recipe(FE ~ ., data = car_train) %>% 
+  step_poly(eng_displ, degree = 2, options = list(raw = TRUE))
+car_recipe
+```
+
+
+```{r}
+car_recipe <- car_recipe %>% prep()
+car_recipe
+```
+
+
+```{r}
+car_train <- car_recipe %>% juice()
+car_train
+```
+
+
+```{r}
+car_test <- car_recipe %>% bake(car_test)
+car_test
+```
+
+#### Fit model
+
+```{r}
+car_lm <- 
+  linear_reg() %>% 
+  set_engine("lm") %>% 
+  fit(FE ~ ., data = car_train)
+car_lm
+```
+
+
+#### Use model
+
+###### Model fit
+
+```{r}
+car_train %>% 
+  add_column(
+    predict(car_lm, new_data = car_train)
+  ) %>% 
+  yardstick::rmse(truth = FE, estimate = .pred)
+```
+
+```{r}
+car_test %>% 
+  add_column(
+    predict(car_lm, new_data = car_test)
+  ) %>% 
+  yardstick::rmse(truth = FE, estimate = .pred)
+
+```
+
+###### Check assumptions
+
+```{r}
+car_res <- augment(car_lm$fit)
+car_res
+```
+
+```{r}
+car_res %>% 
+  ggplot(aes(.fitted, .resid)) + 
+  geom_point() + 
+  geom_hline(yintercept = 0)
+```
+
+```{r}
+car_res %>% 
+  ggplot(aes(sample = .resid)) + 
+  stat_qq() + 
+  stat_qq_line()
+```
+
+```{r}
+car_res %>% 
+  ggplot(aes(.hat, .std.resid)) +
+  geom_vline(size = 2, colour = "white", xintercept = 0) +
+  geom_hline(size = 2, colour = "white", yintercept = 0) +
+  geom_point(aes(size = .cooksd)) + geom_smooth(se = FALSE)
+```
+
+###### Variable importance
+
+```{r}
+vi(car_lm)
+```
+
+```{r}
+vip(car_lm, 
+    include_type = TRUE, 
+    geom = 'point',
+    mapping = aes_string(col = "Sign"), size = 5) + 
+  scale_color_brewer(palette = "Set1")
+```
+
+###### Inference
+
+```{r}
+tidy(car_lm$fit)
+```
+
+```{r}
+tidy(car_lm$fit) %>% 
+  arrange(p.value)
+```
+
+###### Prediction
+
+
+```{r}
+new_data <- tibble(
+  num_cyl = 4, 
+  num_gears = 6, 
+  eng_displ = 5, 
+  drive = "front"
+) 
+new_data
+```
+
+```{r}
+new_data <- bake(car_recipe, new_data = new_data)
+new_data
+```
+
+```{r}
+predict(car_lm, new_data = new_data)
+predict(car_lm, new_data = new_data, type = "pred_int")
+```
+
+
+# DS_CS02_Data_Cleaning_Eurovision
+
+## Rule 1: Look at the Data
+
+## Rule 2: Is There a Package to Deal With That
+
+```{r}
+songs <- jsonlite::fromJSON(glue::glue("{wdpath}/data/eurovision-lyrics.json"))
+```
+
+## Rule 3: Break it Into Pieces
+
+```{r}
+songs[[1]]
+```
+
+```{r}
+parse_song <- function(song){
+  country <- song$Country
+  artist <- song$Artist
+  title <- song$Song
+  year <- song$Year
+  lyrics <- song$Lyrics
+  translation <- song$`Lyrics translation`
+  place <- song$Pl.
+  tibble(
+    country, artist, title, year, lyrics, translation, place
+  )
+}
+parse_song(songs[[1]])
+```
+
+## Rule 4: Get it Into a Tibble
+
+```{r}
+songs <- 
+  songs %>% 
+  map_df(parse_song, .id = "ID")
+songs
+```
+
+## Rule 5: Look at Each Column
+
+We need to make sure all of our data makes sense in context. You can find the source data at this link: <https://www.kaggle.com/minitree/eurovision-song-lyrics>
+
+#### ID
+
+This is an ID number assigned to each song. We should check that the song IDs are all unique.
+
+```{r}
+songs %>% count(ID) %>% filter(n > 1)
+```
+
+They are unique, but they're also not useful, so delete them.
+
+```{r}
+songs <- 
+  songs %>% 
+  select(-ID)
+songs
+```
+
+#### Artist
+
+Are there any artists who appear more than once?
+
+```{r}
+songs %>% 
+  count(artist) %>%
+  arrange(-n)
+```
+
+```{r}
+songs %>%
+  filter(str_detect(artist, "Jed"))
+```
+
+```{r}
+songs %>%
+  filter(country == "Australia")
+```
+
+#### Title
+
+```{r}
+songs %>%
+  count(title) %>% 
+  arrange(-n)
+```
+
+#### Year
+
+```{r}
+range(songs$year)
+```
+
+```{r}
+songs %>% 
+  count(year) %>% 
+  ggplot(aes(year, n)) + 
+  geom_point() + 
+  theme(axis.text.x = element_text(angle = -90, hjust=0))
+```
+
+#### Lyrics
+
+```{r}
+songs %>% 
+  sample_n(5) %>% 
+  pull(lyrics) %>% 
+  cat(sep = "\n\n\n")
+```
+
+#### Translation
+
+```{r}
+songs %>% 
+  sample_n(5) %>% 
+  pull(translation) %>% 
+  cat(sep = "\n\n\n")
+```
+
+#### Place
+
+```{r}
+songs %>% count(place)
+```
+
+```{r}
+length(unique(songs$year))
+```
+
+```{r}
+songs %>% 
+  count(year, place) %>% 
+  filter(place == "1") %>% 
+  arrange(-n)
+```
+
+According to Wikpedia, there were four winners in 1969:
+
+<https://en.wikipedia.org/wiki/Eurovision_Song_Contest>
+
+> On only one occasion have multiple winners been declared in a single contest: in 1969, four countries finished the contest with an equal number of votes and due to the lack of a tie-break rule at the time, all four countries were declared winners.[7][157] 
+
+## Rule 6: You May Need to Go Back
+
+Our original parse function just grabbed `translation` as is. After looking at `translation`, we can see that this variable says `English` if the original song lyrics are in English. English.
+
+## Rule 7: Create New Columns?
+
+#### Decade
+
+```{r}
+songs
+songs <- 
+  songs %>% 
+  mutate(
+    year = parse_number(year), 
+    decade = year - year %% 10
+  )
+songs %>% 
+  ggplot(aes(year, decade)) + 
+  geom_point()
+```
+
+#### Lyrics
+
+```{r}
+songs %>% 
+  count(translation) %>%
+  arrange(-n)
+```
+
+```{r}
+songs <- 
+  songs %>% 
+  mutate(
+    english_lyrics = ifelse(
+      translation == "English",
+      lyrics, translation
+    ) 
+  )
+```
+
+## Rule 7: Save the Data and Write it Up
+
+It's critically important to make detailed notes about any changes you have made when cleaning the data.
+
+```{r}
+filenamepath <- glue::glue("{wdpath}/data/{lubridate::today()}-eurovision.rds")
+filenamepath
+write_rds(songs,filenamepath)
+```
+
+
+# DS_CS03_Pre_processing_Credit_Data
+
+## Get data and basic cleaning
+#### Read in data
+```{r}
+data(credit_data, package = "modeldata")
+```
+
+#### Convert to tibble
+```{r}
+credit_data <- as_tibble(credit_data)
+credit_data
+```
+
+#### Clean names
+```{r}
+credit_data <- credit_data %>%
+  clean_names()
+credit_data
+```
+
+## Quick gander
+```{r}
+skimr::skim(credit_data)
+```
+
+## Pre-processing
+Consists of three steps: 
+- recipe
+- prep
+- bake / juice
+
+#### Recipe
+###### Set up types of variables
+
+```{r}
+credit_recipe <- recipe(status ~ ., data = credit_data)
+credit_recipe
+summary(credit_recipe)
+```
+
+###### Add steps
+######## Center and scale
+```{r}
+credit_recipe <- 
+  credit_recipe %>% 
+  step_center(all_numeric()) %>% 
+  step_scale(all_numeric())
+credit_recipe
+```
+
+######## Skewness
+```{r}
+get_skewness <- function(x){
+  ## Remove missing
+  x <- x[!is.na(x)]
+  ## Get mean
+  x_bar <- mean(x)
+  ## Get number of observations
+  n <- length(x)
+  ## Calculate v
+  v <- sum( (x - x_bar)^2 ) / (n - 1)
+  ## Calculate skewness
+  skewness <- sum( (x - x_bar)^3 ) / ((n - 1) * v^(3/2))
+  return(skewness)
+}
+get_skewness(rnorm(100))
+get_skewness(rexp(100))
+```
+
+```{r}
+credit_data %>%
+  summarise(
+    across(where(is.numeric), get_skewness)
+  )
+```
+
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_BoxCox(all_numeric())
+credit_recipe
+```
+
+######## Missing data
+```{r}
+vis_miss(credit_data)
+```
+
+```{r}
+gg_miss_upset(credit_data)
+```
+
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_impute_mode(all_nominal()) %>%
+  step_impute_mean(all_numeric())
+credit_recipe
+```
+
+######## Near zero
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_nzv(all_predictors())
+credit_recipe
+```
+
+######## Collinearity
+```{r}
+credit_data %>% 
+  select_if(is.numeric) %>% 
+  cor(use = "pairwise.complete.obs") %>% 
+  corrplot()
+```
+
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_corr(all_numeric())
+credit_recipe
+```
+
+######## Dummy
+```{r}
+credit_recipe <- credit_recipe %>%
+  step_dummy(all_nominal(), -status)
+credit_recipe
+```
+
+```{r}
+tidy(credit_recipe)
+tidy(credit_recipe, n = 1)
+```
+
+#### Prep recipe
+```{r}
+credit_recipe <- credit_recipe %>%
+  prep(data = credit_data)
+credit_recipe
+```
+
+```{r}
+tidy(credit_recipe)
+tidy(credit_recipe, n = 1)
+```
+
+## Get data
+#### Juice
+```{r}
+credit_recipe %>% juice()
+```
+
+#### Bake
+```{r}
+credit_recipe %>% bake(credit_data)
+```
+
+
+# DS_CS04_Cross_Validation_Titanic
+
+## Load data
+
+```{r}
+data("titanic_train", package = "titanic")
+titanic <- as_tibble(titanic_train)
+titanic
+```
+
+## Clean names
+
+```{r}
+titanic <- titanic %>% clean_names()
+titanic
+```
+
+## Convert survived to factor
+
+```{r}
+titanic <- titanic %>% 
+  mutate_all(factor)
+titanic
+```
+
+## Split into training and test
+
+```{r}
+titanic_split <- initial_split(titanic, strata = survived)
+titanic_train <- training(titanic_split)
+titanic_test <- testing(titanic_split)
+```
+
+```{r}
+titanic_train
+```
+```{r}
+titanic_test
+```
+
+
+## Get CV of training
+
+```{r}
+titanic_cv <- vfold_cv(titanic_train, v = 5, strata = survived)
+titanic_cv
+```
+
+
+## Set up workflow
+
+#### Recipe
+
+```{r}
+titanic_recipe <- 
+  recipe(survived ~ sex + pclass, data = titanic_train) %>% 
+  step_dummy(all_predictors()) %>% 
+  step_interact(terms = ~starts_with("sex"):starts_with("pclass"))
+```
+
+```{r}
+titanic_recipe %>% prep() %>% juice()
+```
+
+#### Model
+
+```{r}
+titanic_model <- logistic_reg() %>% set_engine("glm")
+```
+
+```{r}
+titanic_wf <- workflow() %>% 
+  add_recipe(titanic_recipe) %>% 
+  add_model(titanic_model)
+titanic_wf
+```
+
+```{r}
+titanic_fit <- fit(titanic_wf, titanic_train)
+titanic_fit %>% tidy()
+```
+
+## Fit CV
+
+```{r}
+titanic_fits <- fit_resamples(
+  titanic_wf, 
+  resamples = titanic_cv, 
+  control = control_resamples(save_pred = TRUE)
+)
+titanic_fits
+```
+
+
+## Get metrics
+
+```{r}
+titanic_fits %>% collect_metrics()
+```
+## ROC curves
+
+```{r}
+CV_ROC <- 
+  titanic_fits %>% 
+  collect_predictions() %>% 
+  group_by(id) %>% 
+  roc_curve(truth = survived, .pred_1, event_level = "second")
+CV_ROC %>% autoplot()
+```
+
+
+## Compare to test
+
+```{r}
+titanic_test %>% 
+  add_column(
+    predict(titanic_fit, new_data = titanic_test, type = "prob")
+  ) %>% 
+  roc_auc(truth = survived, .pred_1, event_level = "second")
+```
+
+```{r}
+test_ROC <- titanic_test %>% 
+  add_column(
+    predict(titanic_fit, new_data = titanic_test, type = "prob")
+  ) %>% 
+  roc_curve(truth = survived, .pred_1, event_level = "second") %>% 
+  add_column(id = "test")
+bind_rows(CV_ROC, test_ROC) %>% 
+  ggplot(aes(1 - specificity, sensitivity, col = id)) + geom_path() + 
+  scale_color_brewer(palette = "Set2")
+```
+
+
+
+
+# DS_CS05_Ridge_Regression_The_Office
+## Read in data
+
+```{r}
+data("theoffice", package = "schrute")
+office <- theoffice
+office
+```
+
+So each row is a line from the script, we also have info about season, episode etc. 
+
+Want to predict rating from how much each character speaks. 
+
+## Characters
+
+How many characters?
+
+```{r}
+length(unique(office$character))
+```
+
+Too many, so we will collapse down
+
+```{r}
+office <- 
+  office %>% 
+  mutate(
+    character = fct_lump_n(character, 20)
+  )
+unique(office$character)
+```
+
+## Cleaning
+
+First count the number of lines for each character. 
+
+```{r}
+office_long <- 
+  office %>% 
+  group_by(season, episode, character) %>% 
+  summarise(
+    n_lines = n(), 
+    rating = mean(imdb_rating)
+  )
+office_long
+```
+
+Now convert to wide form
+
+```{r}
+office_wide <- 
+  office_long %>% 
+  pivot_wider(
+    names_from = character, 
+    values_from = n_lines, 
+    values_fill = 0
+  )
+office_wide
+```
+
+## Split
+
+```{r}
+office_split <- initial_split(office_wide, strata = rating)
+office_train <- training(office_split)
+office_test <- testing(office_split)
+```
+
+## Preprocessing
+
+```{r}
+office_recipe <- 
+  recipe(rating ~ ., data = office_train) 
+office_recipe
+```
+
+Set ID columns
+
+```{r}
+office_recipe <- 
+  office_recipe %>% 
+  update_role(season,episode, new_role = "ID")
+office_recipe
+```
+
+Scale and center
+
+```{r}
+office_recipe <- 
+  office_recipe %>% 
+  step_center(all_predictors()) %>% 
+  step_scale(all_predictors())
+```
+
+Check 
+
+```{r}
+office_recipe %>% prep() %>% juice()
+office_recipe %>% prep() %>% juice() %>% select(rating)
+```
+
+## Fit ridge regression
+
+#### Set model
+
+```{r}
+office_model <- 
+  linear_reg(mixture = 0, penalty = 0.1) %>% 
+  set_engine("glmnet")
+```
+
+Note still uses lots of lambdas - see fit. Penalty only used for prediction. 
+
+#### Create workflow
+
+```{r}
+office_wf <- 
+  workflow() %>% 
+  add_recipe(office_recipe) %>% 
+  add_model(office_model)
+office_wf
+```
+
+#### Fit workflow
+
+```{r}
+office_ridge <- 
+  office_wf %>% 
+  fit(office_train)
+office_ridge
+```
+
+```{r}
+p <- office_ridge %>% 
+  extract_fit_parsnip() %>% 
+  .$fit  %>% 
+  tidy() %>% 
+  filter(
+    term != "(Intercept)", 
+    lambda < 100
+  ) %>% 
+  ggplot(aes(lambda, estimate, col = term)) + 
+  geom_line() 
+p
+```
+
+```{r}
+ggplotly(p)
+```
+
+## Predict
+
+#### Train RMSE
+
+```{r}
+office_train %>% 
+  add_column(
+    predict(office_ridge, new_data = office_train)
+  ) %>% 
+  ungroup() %>% 
+  rmse(rating, .pred)
+```
+
+#### Test RMSE
+
+```{r}
+office_test %>% 
+  add_column(
+    predict(office_ridge, new_data = office_test)
+  ) %>% 
+  ungroup() %>% 
+  rmse(rating, .pred)
+```
+
+## VIP
+
+```{r}
+office_ridge %>% 
+  pull_workflow_fit() %>% 
+  vi() %>% 
+  ggplot(aes(Importance, fct_reorder(Variable, Importance), fill = Sign)) + 
+  geom_col() + 
+  labs(y = "Character") + 
+  scale_fill_paletteer_d("dutchmasters::milkmaid")
+```
+
+```{r}
+sessionInfo()
+```
+
+
+
+# DS_CS06_Lasso_Hitters
+## Get the Data
+
+```{r}
+data("Hitters", package = "ISLR")
+hitters <- as_tibble(Hitters)
+hitters
+```
+
+## Cleaning
+
+#### Clean Variable Names
+
+```{r}
+hitters %<>% janitor::clean_names()
+hitters
+```
+
+#### Remove NA Values
+
+```{r}
+hitters %<>% drop_na()
+hitters
+```
+
+#### Create Train and Test Splits
+
+```{r}
+hitters_split <- initial_split(hitters, strata = salary)
+hitters_train <- training(hitters_split)
+hitters_test <- testing(hitters_split)
+```
+
+##Workflow
+
+#### Recipe
+
+```{r}
+hitters_recipe <- recipe(salary ~ ., data = hitters) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_dummy(all_nominal_predictors())
+hitters_recipe %>% prep() %>% bake(new_data = NULL)
+hitters_recipe %>% prep() %>% bake(new_data = NULL) %>% pull(salary)
+```
+
+#### Model
+
+```{r}
+hitters_model <- linear_reg(mixture = 1, penalty = tune()) %>%
+  set_engine("glmnet") %>%
+  set_mode("regression")
+hitters_model
+```
+
+#### Workflow
+
+```{r}
+hitters_wf <- workflow() %>%
+  add_model(hitters_model) %>%
+  add_recipe(hitters_recipe)
+hitters_wf
+```
+
+## Tuning
+
+#### Penalty Grid
+
+```{r}
+##hitters_grid <- grid_regular(penalty(), levels = 50)
+hitters_grid <- tibble(penalty = seq(.5,50,.5))
+hitters_grid
+```
+
+#### Cross Validation Folds
+
+```{r}
+set.seed(2022)
+hitters_cv <- vfold_cv(hitters_train, strata = salary)
+hitters_cv
+```
+
+#### Tune Model (Penalty Term)
+
+```{r}
+doParallel::registerDoParallel()
+hitters_tune <- tune_grid(object = hitters_wf,
+                          resamples = hitters_cv,
+                          grid = hitters_grid)
+hitters_tune %>% collect_metrics()
+```
+
+## Decide on a Model
+
+```{r}
+p <- hitters_tune %>%
+  collect_metrics() %>%
+  filter(.metric == "rmse") %>%
+  ggplot(aes(penalty, mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean - std_err, ymax = mean + std_err))
+p
+```
+
+```{r}
+plotly::ggplotly(p)
+```
+
+```{r}
+show_best(hitters_tune, metric = "rmse", n = 10)
+(M1 <- select_best(hitters_tune, metric = "rmse"))
+M2 <- select_by_one_std_err(hitters_tune, metric = "rmse", penalty)
+select_by_pct_loss(hitters_tune, metric = "rmse", penalty, limit = 5)
+```
+
+## Finalise the Model
+
+```{r}
+hitters_final_model <- hitters_wf %>% finalize_workflow(M1)
+hitters_final_model
+```
+
+## Variable Importance
+
+```{r}
+hitters_final_model %>%
+  fit(hitters_train) %>%
+  extract_fit_parsnip() %>%
+  vip()
+```
+
+## Evaluate Model Performance Using Testing Data
+
+```{r}
+hitters_final_model %>% last_fit(hitters_split) %>% collect_metrics()
+```
+
+```{r}
+hitters_test %>%
+  add_column(hitters_final_model %>%
+               fit(data = hitters_train) %>%
+               predict(new_data = hitters_test)) %>%
+  rmse(salary, .pred)
+```
+
+
+# DS_CS07_Decision_Trees_Titanic
+## Libs
+
+```{r}
+pacman::p_load(tidyverse, tidymodels, janitor, visNetwork)
+```
+
+## Load data
+
+```{r}
+data("titanic_train", package = "titanic")
+titanic <- as_tibble(titanic_train)
+titanic
+```
+
+## Clean names
+
+```{r}
+titanic <- titanic %>% clean_names()
+titanic
+```
+
+## Convert survived, pclass to factor
+
+```{r}
+titanic <- titanic %>% 
+  mutate_at(vars(survived, pclass, sex), factor)
+titanic
+```
+
+## Select survived, pclass, age, sib_sp, parch
+
+```{r}
+titanic <- titanic %>% select(survived, pclass, sex, age, sib_sp, parch)
+titanic
+```
+
+## Set recipe
+
+```{r}
+titanc_recipe <- recipe(survived ~ ., data = titanic)
+```
+
+## Set model
+
+```{r}
+titanic_model <- decision_tree(mode = "classification") %>% 
+  set_engine("rpart")
+```
+
+## Set workflow
+
+```{r}
+titanic_wf <- workflow() %>% 
+  add_recipe(titanc_recipe) %>% 
+  add_model(titanic_model)
+```
+
+## Fit model
+
+```{r}
+titanic_fit <- titanic_wf %>% fit(titanic) %>% pull_workflow_fit()
+titanic_fit
+```
+
+```{r}
+plot(titanic_fit$fit)
+text(titanic_fit$fit)
+```
+
+```{r}
+visTree(titanic_fit$fit)
+```
+
+## Predict
+
+```{r}
+jono <- tibble(
+  pclass = "3", 
+  sex = "male", 
+  age = 51, 
+  sib_sp = 1, 
+  parch = 0
+)
+predict(titanic_fit, new_data = jono)
+predict(titanic_fit, new_data = jono, type = "prob")
+```
+
+
+# DS_CS08_SVM_Board_Game
+## Load data
+
+```{r, eval = FALSE}
+tuesdata <- tidytuesdayR::tt_load("2019-03-12")
+board <- tuesdata$board_games
+write_rds(board, glue::glue("{wdpath}/data/board.rds"))
+```
+
+```{r}
+board <- read_rds(glue::glue("{wdpath}/data/board.rds"))
+```
+
+## Clean up
+
+```{r}
+board <- 
+  board %>% 
+  select(
+    rating = average_rating, 
+    time = playing_time, 
+    year = year_published
+  )
+board
+```
+
+```{r}
+board %>% ggplot(aes(time)) + geom_histogram(col = "black", fill = "orange")
+```
+
+```{r}
+board <- 
+  board %>% 
+  filter(time > 0, time <= 360)
+```
+
+```{r}
+board %>% ggplot(aes(time)) + geom_histogram(col = "black", fill = "orange")
+```
+
+
+
+Convert rating into three levels
+
+```{r}
+board <- 
+  board %>% 
+  mutate(
+    rating = cut_number(
+      rating, 3, 
+      labels = c("pants", "yeah", "wow")
+    )
+  )
+```
+
+
+## EDA
+
+```{r}
+board %>% 
+  ggplot(aes(year, time, 
+             col = rating)) + 
+  geom_point(alpha = 0.7) + 
+  scale_colour_hp(house = "ravenclaw", discrete = TRUE)
+  
+```
+
+```{r}
+board %>% 
+  ggplot(aes(year, time, 
+             col = rating)) + 
+  geom_density_2d() + 
+  scale_colour_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+## Model
+
+```{r}
+board_wf <- 
+  workflow() %>% 
+  add_recipe(
+    recipe(rating ~ ., data = board) %>% 
+      step_log(time)
+  ) %>% 
+  add_model(
+    svm_poly(mode = "classification", degree = 2) %>% 
+      set_engine("kernlab")
+  )
+```
+
+```{r, cache=TRUE}
+board_M1 <- board_wf %>% fit(board)
+board_M1
+```
+
+
+```{r, cache=TRUE}
+board_M2 <- 
+  board_wf %>% 
+  update_model(
+    svm_rbf(mode = "classification") %>% 
+      set_engine("kernlab")
+  ) %>% 
+  fit(board)
+```
+
+
+```{r, cache=TRUE}
+board_M3 <- 
+  board_wf %>% 
+  update_model(
+    rand_forest(mode = "classification") %>% 
+      set_engine("ranger")
+  ) %>% 
+  fit(board)
+```
+
+## Predict
+
+```{r}
+newdata <- crossing(
+  year = seq(1980, 2016, length = 100),
+  time = seq(1, 360, length = 100)
+)
+```
+
+
+```{r}
+newdata %>% 
+  add_column(
+    predict(board_M1, new_data = newdata)
+  ) %>% 
+  ggplot(aes(year, time, fill = .pred_class)) + 
+  geom_hex() + 
+  scale_fill_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+
+```{r}
+newdata %>% 
+  add_column(
+    predict(board_M2, new_data = newdata)
+  ) %>% 
+  ggplot(aes(year, time, fill = .pred_class)) + 
+  geom_hex() + 
+  scale_fill_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+```{r}
+newdata %>% 
+  add_column(
+    predict(board_M3, new_data = newdata)
+  ) %>% 
+  ggplot(aes(year, time, fill = .pred_class)) + 
+  geom_hex() + 
+  scale_fill_hp(house = "ravenclaw", discrete = TRUE)
+```
+
+
+```{r}
+board %>% 
+  add_column(
+    predict(board_M1, new_data = board, type = "prob")
+  ) %>% 
+  mutate(type = "SVM poly") %>% 
+  bind_rows(
+    board %>% 
+      add_column(
+        predict(board_M2, new_data = board, type = "prob")
+      ) %>% 
+      mutate(type = "SVM radial")
+  ) %>% 
+  bind_rows(
+    board %>% 
+      add_column(
+        predict(board_M3, new_data = board, type = "prob")
+      ) %>% 
+      mutate(type = "RF")
+  ) %>% 
+  group_by(type) %>% 
+  roc_curve(rating, starts_with(".pred")) %>% 
+  autoplot()
+```
+
+
+# DS_CS09_PCA_Spotify
+## Read in data
+
+```{r}
+spotify <- read_rds(glue::glue("{wdpath}/data/spotify.rds"))
+spotify
+```
+
+## Clean up
+
+```{r}
+spotify <- 
+  spotify %>% 
+  select(danceability:duration_ms, genre = playlist_genre)
+spotify
+```
+
+```{r, message=FALSE}
+pacman::p_load(corrplot)
+spotify %>% 
+  select(danceability:duration_ms) %>% 
+  cor(use = "pairwise.complete.obs") %>% 
+  corrplot()
+```
+
+## PCA
+
+```{r}
+spotify_prep <- 
+  spotify %>% 
+  recipe(genre ~ .) %>% 
+  step_normalize(all_predictors()) %>% 
+  step_pca(all_predictors(), num_comp = 4) %>% 
+  prep()
+spotify_prep
+```
+
+## Loadings plot
+
+```{r, message=FALSE}
+pacman::p_load(tidytext)
+spotify_prep %>% 
+  tidy(n = 2) %>% 
+  filter(component %in% c("PC1", "PC2", "PC3", "PC4")) %>% 
+  group_by(component) %>% 
+  top_n(5) %>% 
+  mutate(
+    terms_order = reorder_within(terms, abs(value), component)
+  ) %>% 
+  ggplot(
+    aes(value, terms_order, fill = terms) 
+  ) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~component, scales = "free_y") + 
+  scale_y_reordered()
+```
+
+## First two PC
+
+```{r}
+spotify_prep %>% 
+  juice() %>% 
+  ggplot(aes(PC1, PC2, col = genre))  + 
+  geom_point(alpha = 0.7) + 
+  scale_color_paletteer_d("calecopal::superbloom3")
+```
+
+```{r}
+spotify_prep %>% 
+  juice() %>% 
+  ggplot(aes(PC1, fill = genre))  + 
+  geom_density(alpha = 0.5) + 
+  scale_fill_paletteer_d("calecopal::superbloom3")
+```
+
+## Skree plot
+
+```{r}
+sdev <- spotify_prep$steps[[2]]$res$sdev
+
+percent_variation <- sdev^2 / sum(sdev^2)
+percent_variation
+
+tibble(
+  component = str_c("PC", 1:length(percent_variation)),
+  percent_var = percent_variation
+) %>%
+  mutate(component = fct_inorder(component)) %>%
+  ggplot(aes(component, percent_var)) +
+  geom_col() +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(x = NULL, y = "Percent variance explained by each PCA component")
+```
