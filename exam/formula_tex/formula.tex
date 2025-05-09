@@ -1,0 +1,706 @@
+\documentclass[a4paper,9pt,fleqn]{extarticle}
+\usepackage[a4paper,margin=0.3in]{geometry}
+\usepackage{savetrees}
+\usepackage{amsmath, amssymb}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{titlesec}
+\usepackage{multicol}
+
+
+% === 全局格式设置 ===
+\linespread{1.5}
+\setlength{\parskip}{0pt}
+\setlength{\abovedisplayskip}{2pt}
+\setlength{\belowdisplayskip}{2pt}
+\renewcommand{\arraystretch}{0.9}
+\setlength{\tabcolsep}{4pt}
+\setlist{noitemsep, topsep=0pt, leftmargin=*}
+
+% === 标题格式 ===
+\titleformat{\subsection}[hang]
+  {\normalfont\bfseries}
+  {}
+  {0pt}
+  {}
+\titlespacing*{\subsection}
+  {0pt}
+  {0pt}
+  {0pt}
+
+% === 数学操作符 ===
+\DeclareMathOperator{\E}{E}
+\DeclareMathOperator{\var}{var}
+\DeclareMathOperator{\MSE}{MSE}
+\DeclareMathOperator{\TSS}{TSS}
+\DeclareMathOperator{\RSS}{RSS}
+\DeclareMathOperator{\Bias}{Bias}
+\DeclareMathOperator{\Max}{Max}
+\begin{document}
+\small
+
+\title{STATS 7022 Data Scence PG Formula Sheet}
+\author{Secary. M}
+
+\maketitle
+
+\section{Linear Regression}
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Models}
+    \begin{flushleft}
+    $\textbf{Bias of } \hat{f} \quad b_f = \mathbb{E}[\hat{y}_i] - y_i$ \\[1ex]
+
+    $\textbf{Bias-Var Trade-off} \quad \mathbb{E}[(y_0 - \hat{y}_0)^2] = \mathrm{Var}(\hat{y}_0) + \mathrm{Bias}(\hat{y}_0)^2 + \mathrm{Var}(\epsilon)$ \\[1ex]
+
+    $\textbf{TSS} = \sum_{i = 1}^{n}(y_i - \bar{y})^2 \quad 
+    \textbf{RSS} = \sum_{i = 1}^{n}(y_i - \hat{y}_i)^2$ \\[1ex]
+
+    $\textbf{MSE (Loss)} = \frac{1}{n} \sum_{i = 1}^{n}(y_i - \hat{y}_i)^2 \quad
+    \textbf{F} = \frac{(\mathrm{TSS} - \mathrm{RSS}) / p}{\mathrm{RSS} / (n - p - 1)}$ \\[1ex]
+
+    $\textbf{R}^2 = 1 - \frac{\mathrm{RSS}}{\mathrm{TSS}} \quad
+    \textbf{RMSE} = \sqrt{\frac{\mathrm{RSS}}{n - p - 1}}$
+    \end{flushleft}
+\end{minipage}
+\hspace{0.05\textwidth}
+\begin{minipage}[t]{0.45\textwidth}
+\raggedright
+\subsection*{MLR}
+\begin{flushleft}
+\textbf{Linear Model: } $Y = X\beta + \epsilon$, with $\mathbb{E}[\epsilon] = 0$ and $\text{Var}(\epsilon) = \sigma^2 I_{n \times n}$
+
+\vspace{1ex}
+\textbf{Estimator of } $\beta$: $Q(\beta) = \| y - X\beta \|^2$
+
+\vspace{1ex}
+\textbf{Estimator of Variance } $\sigma^2$: $s_e^2 = \frac{1}{n - p - 1} \| y - X\hat{\beta} \|^2$
+
+\vspace{1ex}
+\textbf{Slope: } $\hat{\beta} = (X^TX)^{-1}X^Ty$
+
+\vspace{1ex}
+\textbf{Simple LR: } $\hat{\beta}_1 = \frac{\sum_{i=1}^{n}(x_i - \bar{x})y_i}{\sum_{i=1}^{n}(x_i - \bar{x})^2}$, \quad $\hat{\beta}_0 = \bar{y} - \hat{\beta}_1 \bar{x}$
+\end{flushleft}
+\end{minipage}
+\section{Classification}
+\subsection*{ROC}
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+    \vspace{0pt}
+    \begin{tabular}{c|cc}
+        & Condition True & Condition False \\
+        \hline
+        Prediction True & True Positive (\textbf{TP}) & False Positive (\textbf{FP}) \\
+        Prediction False & False Negative (\textbf{FN}) & True Negative (\textbf{TN}) \\
+    \end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.25\textwidth}
+    \vspace{0pt}
+    \[
+    \textbf{Sensitivity (Recall)} = \frac{TP}{TP + FN}
+    \]
+    \[
+    \textbf{Specificity} = \frac{TN}{TN + FP}
+    \]
+    \[
+    \textbf{Precision} = \frac{TP}{TP + FP}
+    \]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.25\textwidth}
+    \vspace{0pt}
+    \[
+    \textbf{FPR} = \frac{FP}{FP + TN}
+    \]
+    \[
+    \textbf{TPR} = \frac{TP}{TP + FN}
+    \]
+    \[
+    \textbf{F1-Score} = \frac{2TP}{2TP + FP + FN}
+    \]
+\end{minipage}
+
+\vspace{1em} % 添加垂直间距
+
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Box-Cox Transformation}
+    \[
+        y =
+        \begin{cases}
+            \displaystyle \frac{x^{\lambda}-1}{\lambda}, & \lambda \neq 0 \\
+            \log(x), & \lambda = 0
+        \end{cases}
+    \]
+    \subsection*{Naive Bayes}
+    \[
+    P(Y = k | X = x) = \frac{1}{Z}P(Y = k) \prod_{i=1}^{p}P(X_i = x_i | Y = k)
+    \]
+\end{minipage}%
+\hspace{0.05\textwidth} % 调整间距
+\begin{minipage}[t]{0.45\textwidth}
+    \raggedright  % 明确左对齐
+    \subsection*{LDA \& QDA}
+    \begin{equation*}
+    \begin{aligned}
+    &\textbf{LDA: } \delta_k(x) = \frac{x \mu_k}{\sigma^2} - \frac{\mu_k^2}{2\sigma^2} + \log(\pi_k) \\
+    &\textbf{LDA (p > 1): } \delta_k(x) = x^T \Sigma^{-1} \mu_k - \frac{1}{2} \mu_k^T \Sigma^{-1} \mu_k + \log(\pi_k) \\
+    &\textbf{QDA: } \delta_k(x) = -\frac{1}{2} x^T \Sigma_k^{-1} x + x^T \Sigma_k^{-1} \mu_k - \frac{1}{2} \mu_k^T \Sigma_k^{-1} \mu_k - \frac{1}{2} \log|\Sigma_k| + \log(\pi_k)
+    \end{aligned}
+    \end{equation*}
+\end{minipage}
+
+\section{Model Selection}
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Subset Selection}
+    Given model \(M_0\) for null model, \(M_p\) for full model, and \(M_k\) for \(k\) predictors,
+    \begin{itemize}
+        \item \textbf{Best Subset Selection:} For \(k = 1, 2, \dots, p\), fit all \(\binom{p}{k}\) models and choose the best one. 
+        \item \textbf{Forward Stepwise Selection:} Start with \(M_0\) and add one variable at a time.
+        \item \textbf{Backwards Stepwise Selection:} Start with \(M_p\) and remove one variable at a time.  
+    \end{itemize}
+\end{minipage}
+\hspace{0.05\textwidth}
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Metrics}
+    \[
+        C_p = \frac{1}{n}(RSS + 2p\hat{\sigma}^2) 
+    \]
+    \[
+        C'_p = \frac{RSS}{\hat{\sigma}^2} + 2p - n
+    \]
+    \[
+        AIC = 2p - 2log(\hat{L})  
+    \]
+    \[
+        AICc = AIC + \frac{2p(p + 1)}{n - p - 1}
+    \]
+    \[
+        BIC = log(n)p - 2log(\hat{L}).
+    \]
+    \[
+        \textbf{Adjusted} R^2 = 1 - \frac{\RSS/(n - p - 1)}{\TSS/(n - 1)}
+    \]
+\end{minipage}
+
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection{Ridge and Lasso}
+\begin{minipage}{0.45\textwidth}
+    \textbf{Ridge Regression}
+        \[ 
+            min \{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \sum_{j=1}^{p}{\hat{\beta}_j}^2 \} 
+        \]
+\end{minipage}
+\hspace{0.05\textwidth}
+\begin{minipage}{0.45\textwidth}
+    \textbf{Lasso Regression}
+        \[ 
+            min \{ \sum_{i=1}^{n}(y_i - \hat{y}_i)^2 + \lambda \vert \hat{\beta_j} \vert \} 
+        \]
+\end{minipage}
+\[
+    RSS(\lambda) = (y - X\hat{\beta})^T(y-X\hat{\beta}) + \lambda \beta^T\beta ,\
+    \text{solving gives }
+    \hat{\beta} = (X^TX + \lambda I)^{-1}X^Ty
+\]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+\subsection*{LOOCV}
+\[
+\MSE_i = (y_i - \hat{y}_i)^2 \quad CV_{(n)} = \frac{1}{n}\sum_{i=1}^{n}MSE_i ,\quad
+\]
+\[
+CV_{(n)} = \frac{1}{n}\sum_{i=1}^{n}\left(\frac{y_i - \hat{y}_i}{1 - h_i}\right)^2 ,\quad 
+h_i = diag(X(X^TX)^{-1}X^T) 
+\]
+\end{minipage}
+\section{Polynomial Regression and Spline}
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Polynomial Regression}
+        \[
+            y_i = \beta_0 + \beta_1 x_i + \beta_2 x_i^2 + \ldots + \beta_d x_i^d + \epsilon_i
+        \]
+        \text{Giving K knots, we have K+1 intervals.}
+        \[
+            C_0(X) + C_1(X) + \ldots + C_{K-1}(X) + C_K(X) = 1.
+        \]
+        \[
+            y_i = \beta_0 + \beta_1C_1(x_i) + \beta_2C_2(x_i) + \ldots + \beta_KC_K(x_i) + \epsilon_i
+        \]
+\end{minipage}
+\hspace{0.05\textwidth} 
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Cubic Spline}
+        A cubic spline with K knots,
+        \[
+            y_i = \beta_0 + \beta_1C_1(x_i) + \beta_2C_2(x_i) + \ldots + \beta_KC_K(x_i) + \epsilon_i.
+        \]
+        Truncated polynomial basis functions:
+        \[
+            h(x, \xi ) =(x - \xi)^3_+ = \begin{cases}
+                (x - \xi)^3, & x > \xi \\
+                0, & x \leq \xi
+            \end{cases}
+        \]
+\end{minipage}
+\vspace{1em}
+\begin{itemize}
+    \item Freedom of Cubic Spline: \(K + 4\) degrees of freedom.
+    \item  A degree-d spline is a piecewise degree-d polynomial with continuity
+    in derivatives up to degree d − 1.
+    \item To fit a cubic spline with K knots, we fit a linear regression with an
+    intercept and the K + 3 predictors:
+    \(
+        x, x^2, x^3, h_1(x, \xi_1), h_2(x, \xi_2), \ldots, h_K(x, \xi_K).
+    \)
+    \item  A natural cubic spline with K knots uses K degrees of freedom
+\end{itemize}
+
+\subsection*{Smoothing Splines}
+We can try and ensure that g(x) is smooth by choosing g(x) that minimizes
+\(
+    \sum_{i=1}^{n}(y_i - g(x_i))^2 + \lambda \int g''(x)^2 dx
+\).\\
+\textbf{Effective Degrees of Freedom: }
+\(
+    df_{\lambda} = \sum_{i = 1}^{n}[S_\lambda]_{ii}, \ \text{the trace of } S_\lambda.
+\)
+
+\section{KNN}
+
+\begin{minipage}[t]{0.3\textwidth}
+\subsection*{KNN Regression}
+\[
+    \hat{P}(Y = j | X = x_0) = \frac{1}{K} \sum_{i \in \mathcal{N}_0}I(y_i = j) 
+\]
+\[ 
+    \hat{f}(x_0) = \frac{1}{K} \sum_{i \in \mathcal{N}_0}y_i
+\]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}
+\subsection*{Nadaraya–WatsonKernel-WeightedAverage}
+\[
+\hat{f}(x_0) = \frac{\sum_{i=1}^{n}k_{\lambda}(x_0 , x_i)y_i}{\sum_{i=1}^{n}k_{\lambda}(x_0 , x_i)} 
+\]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}
+\subsection*{Epanechnikov quadratic kernel}
+\[
+    K_{\lambda}(x_0, x) = D\left(\frac{\vert x - x_0 \vert}{\lambda}\right) 
+\]
+\[
+    D(t) = \begin{cases}
+        \frac{3}{4}(1 - t^2), & \vert t \vert < 1 \\
+        0, & \text{otherwise}
+    \end{cases}
+\]
+\end{minipage}
+
+\section{MARS and CART}
+\begin{minipage}[t]{0.45\textwidth}
+\subsection*{MARS}
+\[
+    \hat{f}(x) = \sum_{i=1}^{k}c_iB_i(x)
+\]
+where \(B_i(x)\) takes one of three forms:
+\begin{itemize}
+    \item an intercept,
+    \item a hinge function \(max(0, x - c) \text{ or } max(0,  c -x)\)
+    \item a product of hinge functions \(h_j(x)h_k(x)\) for some \(\xi_j\) and \(\xi_k\).
+\end{itemize}
+\end{minipage}
+\hspace{0.05\textwidth}
+\begin{minipage}[t]{0.45\textwidth}
+\subsection*{GCV}
+\[
+    \text{GCV} = \frac{\frac{1}{N}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}{\left(1 - \frac{ENP}{N}\right)^2}
+\]
+where \(ENP = k + \frac{d(k - 1)}{2}\) and penalty term \(d\) is usually 2 or 3.
+\vspace{1.2em}
+\subsection*{Michaelis-Menten Model}
+\[
+    f(x, (K, V_m)) = \frac{V_mx}{K + x}
+\]
+\end{minipage}
+\subsection*{Classification Trees}
+\[
+\hat{p}_{mk} = \frac{1}{N_m}\sum_{i \in R_m}I(y_i = k), \quad k(m) = \arg \max_{k} \hat{p}_{mk}
+\]
+\begin{minipage}[t]{0.32\textwidth}
+\subsection*{Misclassification rate}
+\[
+    \frac{1}{N_m}\sum_{x_i \in R_m}I(y_i \neq k(m)) = 1 - \hat{p}_{mk(m)}
+\]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}
+    \subsection*{Gini Index}
+    \[
+       \sum_{k=1}^{K}\hat{p}_{mk}(1 - \hat{p}_{mk}) = 1 - \sum_{k=1}^{K}\hat{p}_{mk}^2
+    \]
+    \end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}
+    \subsection*{Cross entropy / deviance}
+    \[
+       - \sum_{k=1}^{K}\hat{p}_{mk}\log(\hat{p}_{mk})
+    \]
+    \end{minipage}
+
+\section{Random Forest}
+\subsection*{Bootstrap}
+Consider a random sample \(S = \{X_1, X_2, \ldots, X_n\}\), and its bootstrap resample:
+\[
+    S^*_b = \{X^*_{b1}, X^*_{b2}, \ldots, X^*_{bn}\},
+\]
+where
+
+\noindent
+\begin{minipage}[t]{0.32\textwidth} % 第一栏
+    \vspace{-2em}
+    \[
+    \bar{X^*} = \hat{\E}[X^*] = \frac{1}{B}\sum_{b=1}^{B}X^*_b 
+    \]
+\end{minipage}%
+\hfill % 填充栏间空白
+\begin{minipage}[t]{0.32\textwidth} % 第二栏
+    \vspace{-2em}
+    \[
+    \hat{\var}{(X^*)} = \frac{1}{B-1}\sum_{b=1}^{B}(X^*_b - \bar{X^*})^2
+    \]
+\end{minipage}%
+\hfill % 填充栏间空白
+\begin{minipage}[t]{0.32\textwidth} % 第三栏
+    \vspace{-2em}
+    \[
+    \bar{b}_T(\theta)(\textbf{Bias}) = \hat{X}^* - X
+    \]
+\end{minipage}
+\vspace{1.2em}
+\subsection*{Bagging}
+Consider\(\{X_1, X_2, \dots, X_n\} \), \(X_i \sim N(\mu. \sigma^2)\).
+Then,
+
+\begin{minipage}[t]{0.45\textwidth}
+    \vspace{-2em}
+    \[
+    \var(\bar{X}) = \frac{\sigma^2}{n}
+    \]
+\end{minipage}
+\hspace{-0.1\textwidth}
+\begin{minipage}[t]{0.45\textwidth}
+    \vspace{-2em}
+    \[  
+    \var(\bar{X}) = \rho\sigma^2 + \frac{1 - \rho}{n}\sigma^2 \quad \text{with correlation } \rho 
+    \]
+\end{minipage}
+
+\subsection*{Guidelines}
+\begin{itemize}
+    \item \textbf{Classification:} Default for $m$ is $\lfloor \sqrt{p} \rfloor$ and minimum node size of 1
+    \item \textbf{Regression:} Default for $m$ is $\lfloor \frac{p}{3} \rfloor$ and minimum node size of 1
+\end{itemize}
+
+\section*{SVM}
+\begin{minipage}[t]{0.45\textwidth}
+\subsection*{P-dimensional Hyperplane}
+\[
+\beta_0 + \beta_1x_1 + \beta_2x_2 + \ldots + \beta_px_p = 0
+\]
+\textbf{Properties}
+\[
+yi(\beta_0 + \beta_1x_1 + \beta_2x_2 + \ldots + \beta_px_p) > 0
+\]
+\subsection*{Inner Product}
+\[
+\langle x_i, x_{i'} \rangle = x_i^T x_{i'} = \sum_{j=1}^{p} x_{ij} x_{i'j}
+\]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Kernel functions}
+    \textbf{Linear} 
+    \[
+    k(x_i, x_{i'}) = \sum_{j=1}^{p}x_{ij}x_{i'j}
+    \]
+    \textbf{Polynomial}
+    \[
+    k(x_i, x_{i'}) = \left(1 + \sum_{j=1}^{p}x_{ij}x_{i'j} \right)^d 
+    \]
+    \textbf{Radial} 
+    \[
+    k(x_i, x_{i'}) = \exp\left( -\gamma\sum_{j=1}^{p}(x_{ij} - x_{i'j})^2 \right)
+    \]
+\end{minipage}
+\clearpage
+\section{PCA}
+Consider $p$ predictors \(X_1, X_2, \dots, X_p\),
+
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{First PC}
+    \begin{align*}
+        &Z_1 = \varPhi_{11} X_1 + \varPhi_{21} X_2 + \dots + \varPhi_{p1} X_p, \quad \sum_{j=1}^{p}{\varPhi_{p1}}^2 = 1 \\
+        &Z_1 = {\alpha_1}^TX \\
+        &var({\alpha_1}^TX) = {\alpha_1}^T\sum \alpha_1
+    \end{align*}
+    \subsection*{Lagarange}
+    \begin{align*}
+        &{\alpha_1}^T\sum \alpha_1 - \lambda({\alpha_1}^T\sum \alpha_1 - 1) \\
+        &\text{Differentiating w.r.t. } \alpha_1 \text { and setting to zero}, \Rightarrow \sum \alpha_1 = \lambda \alpha_1 \\
+        & \Rightarrow \Max {\alpha_1}^T\sum \alpha_1 = \Max {\alpha_1}^T \lambda \alpha_1 = \Max \lambda {\alpha_1}^T  \alpha_1 = \Max \lambda
+    \end{align*}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Second PC}
+    \begin{align*}
+        &\Max {\alpha_2}^T \sum \alpha_2, \quad \text{uncorrelated with } {\alpha_1}^T X.\\
+        & cov({\alpha_1}^T X, {\alpha_2}^T X) = {\alpha_1}^T \sum \alpha_2
+                                              = {\alpha_2}^T \sum \alpha_1
+                                              = {\alpha_2}^T \lambda \alpha_1
+                                              = \lambda {\alpha_2}^T \alpha_1
+    \end{align*}
+    \subsection*{Lagarange}
+    \begin{align*}
+        &{\alpha_2}^T \sum \alpha_2 - \lambda ({\alpha_2}^T \alpha_2 - 1) - \varPhi({\alpha_2}^T \alpha_2 - 0) \\
+        &\text{Differentiating w.r.t. } \alpha_2 \text{ and setting to zero}, \\
+        & \Rightarrow \sum \alpha_2 - \lambda \alpha_2 - \varphi \alpha_1 = 0. \\
+        & \Rightarrow {\alpha_1}^T \sum \alpha_2 - \lambda {\alpha_1}^T \alpha^2 - \varPhi {\alpha_1}^T \alpha_1 = 0, \\
+        & \Rightarrow \varPhi = 0 \\
+        & \Rightarrow \sum \alpha_2 = \lambda \alpha_2.
+    \end{align*}
+\end{minipage}
+
+\section{K-means Clustering}
+\subsection*{Notation}
+Let \(C_1, \dots, C_k\) denote sets containing indices of each observation in each cluster.
+\begin{itemize}
+    \item \(C_1 \cup C_2 \cup \dots \cup C_k = \{1,2,\dots,n\}\)
+    \item \(C_k \cap {C_K}' = \varnothing \) for all \(k \neq k'\).
+\end{itemize}
+\subsection*{Clustering}
+\begin{minipage}[t]{0.45\textwidth}
+    \[
+    \min_{C_1, C_2, \dots, C_k} 
+    \left\{
+    \sum_{k=1}^{K} \frac{1}{|C_k|} 
+    \sum_{i, i' \in C_k} 
+    \sum_{j=1}^{p} (x_{ij} - x_{i'j})^2
+    \right\}
+    \]
+    Note that
+    \[
+    \frac{1}{|C_k|}\sum_{i, i' \in C_k} \sum_{j=1}^{p} (x_{ij} - x_{i'j})^2
+    = 2 \sum_{i \in C_k}\sum_{j=1}^{p} (x_{ij} - \bar{x}_{kj})^2,
+    \]
+    where 
+    \[
+    \bar{x}_{kj} = \frac{1}{|C_k|}\sum_{i \in C_k}x_{ij}.
+    \]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+    \textbf{Algorithm}
+    \begin{enumerate}
+        \item Randomly assign a number of 1 to \(K\) to each observation.
+        \item Iterate until no changes in cluster assignment:
+        \begin{enumerate}
+            \item For each cluster, calculate the centroid. The centroid is the vector of the sample mean of the p features for observations in the cluster.
+            \item Assign each observation to the cluster of the centroid that is closest. 
+        \end{enumerate}
+    \end{enumerate}
+\end{minipage}
+
+\section{Multi-dimensional Scaling}
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Scaling Procedures}
+\begin{itemize}
+    \item Classical scaling: dissimilarities are Euclidean distances.
+    \item Ordinal scaling: uses only the order of the dissimilarity measure.
+\end{itemize}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+    \subsection*{Dissimilarity Coefficients}
+    The dissimilarity coefficient between two points s and r must satisfy the following constraints:
+    \begin{enumerate}
+        \item \(d_{sr} \geq 0\) for every \(r\) and \(s\).
+        \item \(d_{rr} = 0\) for every \(r\). 
+        \item \(d_{sr} = d_{rs}\) for every \(r\) and \(s\).
+        \item  \(d_{rt} + d_{ts} \geq d_{rs}\) for every \(r, s\) and \(t\) (Only if A metric satisfies 1-3).
+    \end{enumerate}
+\end{minipage}
+\subsection*{Dissimilarity Coefficients}
+\begin{minipage}[t]{0.32\textwidth}
+    \textbf{Euclidean}
+    \[
+    d_{rs} = \left(\sum_{i=1}^{p}(x_{ri} - x_{si})^2\right)^\frac{1}{2}
+    \]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}
+    \textbf{Manhattan}
+    \[
+    d_{rs} = \sum_{i=1}^{p}|x_{ri} - x_{si}|
+    \]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.32\textwidth}
+    \textbf{Minkowski}
+    \[
+    d_{rs} = \left(\sum_{i=1}^{p}|x_{ri} - x_{si}|^R\right)^\frac{1}{R}
+    \]
+\end{minipage}
+\subsection*{Association Table}
+\begin{minipage}[t]{0.22\textwidth}
+\begin{tabular}{c|cc}
+    \multicolumn{1}{c|}{} & \multicolumn{2}{c}{Subject $r$} \\
+    \hline
+    Subject $s$ & 1 & 0 \\
+    \hline
+    1 & $a$ & $b$ \\
+    0 & $c$ & $d$ \\
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.22\textwidth}
+    \textbf{Simple matching coefficient}
+    \[
+    \frac{a + d}{a + b + c + d}
+    \]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.22\textwidth}
+    \textbf{Hamming distance}
+    \[
+    b + c
+    \]
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.22\textwidth}
+    \textbf{Jaccard’s coefficient}
+    \[
+    \frac{a}{a + b + c}
+    \]
+\end{minipage}
+\subsection*{Classical Scaling}
+\begin{multicols}{3}
+    Consider 
+\[
+B = XX^T
+\]
+The \((r, s)\)th term of B
+\[
+b_{rs} = \sum_{j=1}^{p}x_{rj}x{sj}.
+\]
+\textbf{Euclidean Distances}
+\[
+d_{rs}^2 = \sum_{j=1}^{p} (x_{rj} - x_{sj})^2 = b_{rr} + b_{ss} - 2b_{rs}.
+\]
+Summing Over \textit{r}, \textit{s}, and Both
+\[
+\sum_{r=1}^{n} d_{rs}^2 = T + n b_{ss}
+\]
+\[
+\sum_{s=1}^{n} d_{rs}^2 = n b_{rr} + T
+\]
+\[
+\sum_{r=1}^{n} \sum_{s=1}^{n} d_{rs}^2 = 2nT
+\]
+
+\noindent where
+\[
+T = \sum_{r=1}^{n} b_{rr},
+\]
+i.e., the trace of \( B \). \\
+Rearranging gives
+\[
+b_{rs} = -\frac{1}{2} \left[ d_{rs}^2 - d_{r\bullet}^2 - d_{s\bullet}^2 + d_{\bullet\bullet}^2 \right].
+\]
+\end{multicols}
+
+\section{The EM Algorithm}
+\begin{multicols}{2}
+\subsection*{Example Using Two Normals}
+Consider a model with two normally distributed groups. For ease of explanation assume that each group has the same variance.
+\begin{align*}
+    &Y_1 \sim N(\mu_1, \sigma^2),\\
+    &Y_1 \sim N(\mu_1, \sigma^2),\text{ and}\\
+    &Y = (1 - \bigtriangleup)Y_1 + \bigtriangleup Y_2,
+\end{align*}
+where \(\bigtriangleup in \{0,1\}\) and
+\[
+P(\bigtriangleup = 1) = \pi.
+\]
+\subsection*{Mixture Density}
+\[
+f(y;\pi, \mu_1, \mu_2, \sigma^2) = (1 - \pi)f_1(y;\mu_1, \sigma^2) + \pi(y;\mu_2, \sigma^2)
+\]
+where \(f_1\) and \(f_2\) are the respective PDFs of the normal distributions.
+\subsection*{Log-likelihood}
+\[
+\ell(\theta;y) = \sum_{i=1}^{n}log((1 - \pi)f_1(y_i;\mu_1, \sigma^2) + \pi f_2(y_i;\mu_2, \sigma^2))
+\]
+\subsection*{Latent Variable}
+Let $\Delta_i$ be latent variables such that if $\Delta_i = 1$ then observation $i \sim \mathcal{N}(\mu_2, \sigma^2)$.\\
+With this missing information, the likelihood becomes easier to deal with:
+\[
+f(y_i; \pi, \mu_1, \mu_2, \sigma^2, \Delta_i)
+= \left[(1 - \pi) f_1(y; \mu_1, \sigma^2)\right]^{1 - \Delta_i}
+  \left[\pi f_2(y; \mu_2, \sigma^2)\right]^{\Delta_i}.
+\]
+\subsection*{Latent Variable Log-likelihood}
+
+\[
+\begin{aligned}
+\ell(\theta; \mathbf{y}, \Delta)
+&= \sum_{i=1}^n (1 - \Delta_i) \log\left( (1 - \pi) f_1(y_i; \mu_1, \sigma^2) \right) + \Delta_i \log\left( \pi f_2(y_i; \mu_2, \sigma^2) \right) \\
+&= \sum_{i=1}^n (1 - \Delta_i) \log(1 - \pi) + (1 - \Delta_i) \log\left( f_1(y_i; \mu_1, \sigma^2) \right) \\
+&\quad + \sum_{i=1}^n \Delta_i \log(\pi) + \Delta_i \log\left( f_2(y_i; \mu_2, \sigma^2) \right)
+\end{aligned}
+\]
+
+\subsection*{Responsibilities}
+Since we don't know $\Delta_i$, we use the expected value
+\[
+\gamma_i(\theta) = \mathbb{E}[\Delta_i \mid \theta, \mathbf{y}] = \mathbb{P}[\Delta_i = 1 \mid \theta, \mathbf{y}].
+\]
+
+\subsection*{EM Algorithm for Two-component Normal Distribution}
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item Make initial guesses of parameters: 
+    $\hat{\pi}, \hat{\mu}_1, \hat{\mu}_2, \hat{\sigma}_1^2, \hat{\sigma}_2^2$.
+  
+    \item \textit{Expectation step:} compute the responsibilities:
+    \[
+    \hat{\gamma}_i = 
+    \frac{\hat{\pi} f(y_i; \hat{\mu}_2, \hat{\sigma}^2)}
+    {(1 - \hat{\pi}) f(y_i; \hat{\mu}_1, \hat{\sigma}^2) + \hat{\pi} f(y_i; \hat{\mu}_2, \hat{\sigma}^2)}
+    \]
+  
+    \item \textit{Maximisation step:} estimate the parameters:
+    \[
+    \hat{\mu}_1 = \frac{\sum_{i=1}^n (1 - \hat{\gamma}_i) y_i}{\sum_{i=1}^n (1 - \hat{\gamma}_i)}, 
+    \qquad
+    \hat{\mu}_2 = \frac{\sum_{i=1}^n \hat{\gamma}_i y_i}{\sum_{i=1}^n \hat{\gamma}_i},
+    \]
+    \[
+    \hat{\sigma}^2 = \frac{
+      \sum_{i=1}^n (1 - \hat{\gamma}_i)(y_i - \hat{\mu}_1)^2 
+      + \hat{\gamma}_i (y_i - \hat{\mu}_2)^2
+    }{n - 2},
+    \]
+    \[
+    \text{and} \qquad 
+    \hat{\pi} = \frac{\sum_{i=1}^n \hat{\gamma}_i}{n}.
+    \]
+  
+    \item Iterate steps 2 and 3 until convergence.
+  \end{enumerate}
+\end{multicols}
+\end{document}
